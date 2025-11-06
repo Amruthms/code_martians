@@ -72,13 +72,35 @@ def start_vision():
         python_exe = os.path.join(vision_dir, "myvenv", "Scripts", "python.exe")
         main_py = os.path.join(vision_dir, "main.py")
         
+        # Create log files for stdout and stderr
+        log_dir = os.path.join(vision_dir, "logs")
+        os.makedirs(log_dir, exist_ok=True)
+        stdout_log = open(os.path.join(log_dir, "vision_stdout.log"), "w")
+        stderr_log = open(os.path.join(log_dir, "vision_stderr.log"), "w")
+        
         # Start the vision processing as a subprocess
+        # Use DETACHED_PROCESS on Windows to run independently
+        creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0
+        
         vision_process = subprocess.Popen(
             [python_exe, main_py],
             cwd=vision_dir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stdout=stdout_log,
+            stderr=stderr_log,
+            creationflags=creation_flags
         )
+        
+        # Give it a moment to start
+        time.sleep(1)
+        
+        # Check if it's still running
+        if vision_process.poll() is not None:
+            # Read error logs
+            stdout_log.close()
+            stderr_log.close()
+            with open(os.path.join(log_dir, "vision_stderr.log"), "r") as f:
+                error_msg = f.read()
+            return {"status": "error", "message": f"Vision process exited immediately. Error: {error_msg}"}
         
         return {"status": "started", "message": "Vision processing started successfully", "pid": vision_process.pid}
     except Exception as e:
