@@ -151,15 +151,36 @@ def get_camera():
     global camera
     if camera is None or not camera.isOpened():
         camera = cv2.VideoCapture(0)
-        # Set camera properties for better performance
-        camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        # Set camera properties for wider field of view
+        camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)  # Increased from 640
+        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)  # Increased from 480
         camera.set(cv2.CAP_PROP_FPS, 30)
     return camera
 
 def generate_frames():
     """Generate video frames with detections"""
+    from detector import detect_persons
+    from ppe import roi_slices, mask_ratio_hsv
+    import yaml
+    
+    # Load config
+    vision_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "vision")
+    config_path = os.path.join(vision_dir, "config.yaml")
+    
+    try:
+        with open(config_path, "r") as f:
+            CFG = yaml.safe_load(f)
+    except:
+        CFG = {}
+    
+    zones = CFG.get("zones", [])
+    H = CFG.get("helmet_hsv", {})
+    V = CFG.get("vest_hsv", {})
+    H_T = CFG.get("helmet_ratio_thresh", 0.10)
+    V_T = CFG.get("vest_ratio_thresh", 0.15)
+    
     cam = get_camera()
+    frame_count = 0
     
     while True:
         success, frame = cam.read()
@@ -167,16 +188,98 @@ def generate_frames():
             print("Failed to read frame from camera")
             break
         
-        # Resize for display
+        # Resize for display - keep original aspect ratio without zooming
         try:
-            frame = cv2.resize(frame, (960, 540))
+            # Don't resize too much to avoid zooming effect
+            h, w = frame.shape[:2]
+            if w > 1280:
+                scale = 1280 / w
+                frame = cv2.resize(frame, (1280, int(h * scale)))
+            
+            frame_count += 1
+            
+            # Detect persons every frame
+            persons = detect_persons(frame)
+            
+            # Draw zones
+            for z in zones:
+                polygon = z.get("polygon", [])
+                if polygon and len(polygon) > 0:
+                    pts = np.array(polygon, np.int32).reshape((-1, 1, 2))
+                    cv2.polylines(frame, [pts], True, tuple(z.get("color", [0, 0, 255])), 2)
+                    if len(polygon) > 0:
+                        cv2.putText(frame, z.get("name", "Zone"), tuple(polygon[0]), 
+                                  cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            
+            # Process each detected person
+            for (x, y, w, h) in persons:
+                # Get ROIs for helmet and vest detection
+                head_roi = (slice(y, max(0, y+h//3)), slice(x, x+w))
+                torso_roi = (slice(y+h//3, y+2*h//3), slice(x, x+w))
+                
+                try:
+                    head_img = frame[head_roi]
+                    torso_img = frame[torso_roi]
+                    
+                    # Check PPE
+                    helmet_ok = mask_ratio_hsv(head_img, **H) > H_T if H and len(H) > 0 else False
+                    vest_ok = mask_ratio_hsv(torso_img, **V) > V_T if V and len(V) > 0 else False
+                    
+                    # Draw bounding box
+                    color = (0, 255, 0) if (helmet_ok and vest_ok) else (0, 0, 255)
+                    cv2.rectangle(frame, (x, y), (x+w, y+h), color, 3)
+                    
+                    # Add labels
+                    status = "SAFE" if (helmet_ok and vest_ok) else "VIOLATION"
+                    label_color = (0, 255, 0) if (helmet_ok and vest_ok) else (0, 0, 255)
+                    
+                    # Draw status background
+                    cv2.rectangle(frame, (x, y-30), (x+150, y), label_color, -1)
+                    cv2.putText(frame, status, (x+5, y-8), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                    
+                    # Draw specific violations
+                    y_offset = y + h + 25
+                    if not helmet_ok:
+                        cv2.putText(frame, "NO HELMET", (x, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                        y_offset += 25
+                    if not vest_ok:
+                        cv2.putText(frame, "NO VEST", (x, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                    
+                    # Send alerts to backend
+                    if frame_count % 30 == 0:  # Send alert every 30 frames
+                        if not helmet_ok:
+                            ALERTS.append({
+                                "type": "NO_HELMET",
+                                "ts": int(time.time() * 1000),
+                                "zone": None,
+                                "frame_path": None,
+                                "meta": {"confidence": 0.9}
+                            })
+                        if not vest_ok:
+                            ALERTS.append({
+                                "type": "NO_VEST",
+                                "ts": int(time.time() * 1000),
+                                "zone": None,
+                                "frame_path": None,
+                                "meta": {"confidence": 0.9}
+                            })
+                except Exception as e:
+                    print(f"PPE detection error: {e}")
+                    # Still draw the person box even if PPE detection fails
+                    cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 255, 0), 3)
+                    cv2.putText(frame, "PERSON", (x, y-8), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
             
             # Add "LIVE" indicator
-            cv2.putText(frame, "LIVE", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            cv2.putText(frame, "OpenCV Camera Feed", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+            cv2.rectangle(frame, (5, 5), (120, 45), (0, 0, 0), -1)
+            cv2.putText(frame, "LIVE", (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            
+            # Add detection count
+            cv2.putText(frame, f"Persons: {len(persons)}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
             
         except Exception as e:
             print(f"Frame processing error: {e}")
+            import traceback
+            traceback.print_exc()
             continue
         
         # Encode frame as JPEG

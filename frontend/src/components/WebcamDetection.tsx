@@ -46,23 +46,37 @@ export function WebcamDetection() {
 
       // Call backend API to start vision processing
       const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
-      
+
       // Set the image source to the video feed endpoint
       if (imgRef.current) {
-        imgRef.current.src = `${apiUrl}/video_feed?t=${Date.now()}`;
+        // Clear any previous handlers
+        imgRef.current.onload = null;
+        imgRef.current.onerror = null;
+
+        // Set up new handlers before setting src
         imgRef.current.onload = () => {
           console.log("Video stream loaded successfully");
           setIsStreaming(true);
           setIsLoadingModel(false);
+          setError(null);
           updateCameraFeed(9, { streamActive: true, status: "safe" });
           startStatusPolling();
         };
+
         imgRef.current.onerror = (e) => {
           console.error("Failed to load video stream:", e);
-          setError("Failed to connect to video stream. Please ensure the backend is running.");
+          // Only show error if we're still trying to load
+          if (isLoadingModel) {
+            setError(
+              "Failed to connect to video stream. Please ensure the backend is running."
+            );
+          }
           setIsStreaming(false);
           setIsLoadingModel(false);
         };
+
+        // Set the source with timestamp to avoid caching
+        imgRef.current.src = `${apiUrl}/video_feed?t=${Date.now()}`;
       }
 
       // Give it a moment to start loading
@@ -71,7 +85,6 @@ export function WebcamDetection() {
           setIsLoadingModel(false);
         }
       }, 5000);
-
     } catch (error: any) {
       console.error("Error starting vision processing:", error);
 
@@ -83,31 +96,11 @@ export function WebcamDetection() {
       setIsStreaming(false);
       setIsLoadingModel(false);
     }
-  };  const stopWebcam = async () => {
-    try {
-      // Stop the video stream by removing the src and setting a blank image
-      if (imgRef.current) {
-        imgRef.current.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-        imgRef.current.onload = null;
-        imgRef.current.onerror = null;
-      }
-
-      // Call backend to release the camera hardware
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
-      try {
-        const response = await fetch(`${apiUrl}/camera/release`, {
-          method: "POST",
-        });
-        const data = await response.json();
-        console.log("Camera release:", data);
-      } catch (error) {
-        console.error("Error releasing camera:", error);
-      }
-    } catch (error) {
-      console.error("Error stopping vision processing:", error);
-    }
-
+  };
+  const stopWebcam = async () => {
+    // First update UI state
     setIsStreaming(false);
+    setError(null); // Clear error immediately
     updateCameraFeed(9, { streamActive: false, status: "safe" });
 
     if (detectionIntervalRef.current) {
@@ -115,7 +108,31 @@ export function WebcamDetection() {
       detectionIntervalRef.current = null;
     }
 
-    setError(null);
+    try {
+      // Stop the video stream by removing the src and setting a blank image
+      if (imgRef.current) {
+        imgRef.current.src =
+          "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+        imgRef.current.onload = null;
+        imgRef.current.onerror = null;
+      }
+
+      // Call backend to release the camera hardware (delayed to prevent issues on restart)
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      setTimeout(async () => {
+        try {
+          const response = await fetch(`${apiUrl}/camera/release`, {
+            method: "POST",
+          });
+          const data = await response.json();
+          console.log("Camera release:", data);
+        } catch (error) {
+          console.error("Error releasing camera:", error);
+        }
+      }, 500);
+    } catch (error) {
+      console.error("Error stopping vision processing:", error);
+    }
   };
 
   const startStatusPolling = () => {
@@ -351,13 +368,15 @@ export function WebcamDetection() {
           {/* Use img tag for MJPEG stream instead of video tag */}
           <img
             ref={imgRef}
-            className={`w-full h-full object-cover ${isStreaming ? 'block' : 'hidden'}`}
+            className={`w-full h-full object-cover ${
+              isStreaming ? "block" : "hidden"
+            }`}
             alt="Live Camera Feed"
           />
-          <canvas 
-            ref={canvasRef} 
-            className="absolute inset-0 w-full h-full pointer-events-none" 
-            style={{ display: 'none' }}
+          <canvas
+            ref={canvasRef}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ display: "none" }}
           />
 
           {!isStreaming && !error && (
