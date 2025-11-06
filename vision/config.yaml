@@ -1,0 +1,10 @@
+video_source: 0   # set to rtsp/http URL if needed
+helmet_hsv: { h1: 15, h2: 40, s1: 100, s2: 255, v1: 120, v2: 255 }   # hi-vis yellow/orange
+vest_hsv:   { h1: 20, h2: 45, s1: 120, s2: 255, v1: 120, v2: 255 }
+helmet_ratio_thresh: 0.10
+vest_ratio_thresh:   0.15
+proximity_pixels: 120
+zones:
+  - name: "Crane Area"
+    polygon: [[120,420],[360,420],[380,600],[100,600]]
+backend_url: "http://localhost:8000"
