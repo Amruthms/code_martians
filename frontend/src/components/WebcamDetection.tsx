@@ -15,6 +15,7 @@ import { useApp } from "../context/AppContext";
 
 export function WebcamDetection() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isLoadingModel, setIsLoadingModel] = useState(false);
@@ -45,22 +46,32 @@ export function WebcamDetection() {
 
       // Call backend API to start vision processing
       const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
-
-      // Start the video stream by setting the video source
-      if (videoRef.current) {
-        videoRef.current.src = `${apiUrl}/video_feed`;
-        videoRef.current.play();
+      
+      // Set the image source to the video feed endpoint
+      if (imgRef.current) {
+        imgRef.current.src = `${apiUrl}/video_feed?t=${Date.now()}`;
+        imgRef.current.onload = () => {
+          console.log("Video stream loaded successfully");
+          setIsStreaming(true);
+          setIsLoadingModel(false);
+          updateCameraFeed(9, { streamActive: true, status: "safe" });
+          startStatusPolling();
+        };
+        imgRef.current.onerror = (e) => {
+          console.error("Failed to load video stream:", e);
+          setError("Failed to connect to video stream. Please ensure the backend is running.");
+          setIsStreaming(false);
+          setIsLoadingModel(false);
+        };
       }
 
-      setIsStreaming(true);
-      setIsLoadingModel(false);
-      updateCameraFeed(9, { streamActive: true, status: "safe" });
+      // Give it a moment to start loading
+      setTimeout(() => {
+        if (!isStreaming && isLoadingModel) {
+          setIsLoadingModel(false);
+        }
+      }, 5000);
 
-      // Start polling for alerts
-      startStatusPolling();
-
-      // Show success message
-      setError(null);
     } catch (error: any) {
       console.error("Error starting vision processing:", error);
 
@@ -72,14 +83,25 @@ export function WebcamDetection() {
       setIsStreaming(false);
       setIsLoadingModel(false);
     }
-  };
-
-  const stopWebcam = async () => {
+  };  const stopWebcam = async () => {
     try {
-      // Stop the video stream
-      if (videoRef.current) {
-        videoRef.current.src = "";
-        videoRef.current.load();
+      // Stop the video stream by removing the src and setting a blank image
+      if (imgRef.current) {
+        imgRef.current.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+        imgRef.current.onload = null;
+        imgRef.current.onerror = null;
+      }
+
+      // Call backend to release the camera hardware
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      try {
+        const response = await fetch(`${apiUrl}/camera/release`, {
+          method: "POST",
+        });
+        const data = await response.json();
+        console.log("Camera release:", data);
+      } catch (error) {
+        console.error("Error releasing camera:", error);
       }
     } catch (error) {
       console.error("Error stopping vision processing:", error);
@@ -326,21 +348,17 @@ export function WebcamDetection() {
         )}
 
         <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-          <video
-            ref={videoRef}
-            className="w-full h-full object-cover"
-            autoPlay
-            playsInline
-            muted
-            onError={(e) => {
-              console.error("Video stream error:", e);
-              setError(
-                "Failed to load video stream. Please check your camera connection."
-              );
-              setIsStreaming(false);
-            }}
+          {/* Use img tag for MJPEG stream instead of video tag */}
+          <img
+            ref={imgRef}
+            className={`w-full h-full object-cover ${isStreaming ? 'block' : 'hidden'}`}
+            alt="Live Camera Feed"
           />
-          <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+          <canvas 
+            ref={canvasRef} 
+            className="absolute inset-0 w-full h-full pointer-events-none" 
+            style={{ display: 'none' }}
+          />
 
           {!isStreaming && !error && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">

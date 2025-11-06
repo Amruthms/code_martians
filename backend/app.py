@@ -151,88 +151,48 @@ def get_camera():
     global camera
     if camera is None or not camera.isOpened():
         camera = cv2.VideoCapture(0)
+        # Set camera properties for better performance
+        camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        camera.set(cv2.CAP_PROP_FPS, 30)
     return camera
 
 def generate_frames():
     """Generate video frames with detections"""
-    from detector import detect_persons
-    from ppe import roi_slices, mask_ratio_hsv
-    import yaml
-    
-    # Load config
-    vision_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "vision")
-    config_path = os.path.join(vision_dir, "config.yaml")
-    
-    try:
-        with open(config_path, "r") as f:
-            CFG = yaml.safe_load(f)
-    except:
-        CFG = {}
-    
-    zones = CFG.get("zones", [])
-    H = CFG.get("helmet_hsv", {})
-    V = CFG.get("vest_hsv", {})
-    H_T = CFG.get("helmet_ratio_thresh", 0.10)
-    V_T = CFG.get("vest_ratio_thresh", 0.15)
-    
     cam = get_camera()
     
     while True:
         success, frame = cam.read()
         if not success:
+            print("Failed to read frame from camera")
             break
         
         # Resize for display
-        frame = cv2.resize(frame, (960, int(frame.shape[0]*960/frame.shape[1])))
-        
         try:
-            # Detect persons
-            persons = detect_persons(frame)
+            frame = cv2.resize(frame, (960, 540))
             
-            # Draw zones
-            for z in zones:
-                polygon = z.get("polygon", [])
-                if polygon:
-                    pts = np.array(polygon, np.int32).reshape((-1, 1, 2))
-                    cv2.polylines(frame, [pts], True, tuple(z.get("color", [0, 0, 255])), 2)
-                    cv2.putText(frame, z.get("name", "Zone"), tuple(polygon[0]), 
-                              cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            # Add "LIVE" indicator
+            cv2.putText(frame, "LIVE", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            cv2.putText(frame, "OpenCV Camera Feed", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
             
-            # Process each detected person
-            for (x, y, w, h) in persons:
-                # Get ROIs for helmet and vest detection
-                head_roi = (slice(y, y+h//2), slice(x, x+w))
-                torso_roi = (slice(y+h//3, y+2*h//3), slice(x, x+w))
-                
-                head_img = frame[head_roi]
-                torso_img = frame[torso_roi]
-                
-                # Check PPE
-                helmet_ok = mask_ratio_hsv(head_img, **H) > H_T if H else True
-                vest_ok = mask_ratio_hsv(torso_img, **V) > V_T if V else True
-                
-                # Draw bounding box
-                color = (0, 255, 0) if (helmet_ok and vest_ok) else (0, 0, 255)
-                cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
-                
-                # Add labels
-                status = "OK" if (helmet_ok and vest_ok) else "VIOLATION"
-                cv2.putText(frame, status, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
-                
-                if not helmet_ok:
-                    cv2.putText(frame, "NO HELMET", (x, y+h+20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-                if not vest_ok:
-                    cv2.putText(frame, "NO VEST", (x, y+h+40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-        
         except Exception as e:
-            print(f"Detection error: {e}")
+            print(f"Frame processing error: {e}")
+            continue
         
         # Encode frame as JPEG
-        ret, buffer = cv2.imencode('.jpg', frame)
-        frame_bytes = buffer.tobytes()
-        
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+        try:
+            ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            if not ret:
+                print("Failed to encode frame")
+                continue
+                
+            frame_bytes = buffer.tobytes()
+            
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+        except Exception as e:
+            print(f"Encode error: {e}")
+            continue
 
 @app.get("/video_feed")
 def video_feed():
@@ -241,3 +201,17 @@ def video_feed():
         generate_frames(),
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
+
+@app.post("/camera/release")
+def release_camera():
+    """Release the camera to turn off the camera light"""
+    global camera
+    try:
+        if camera is not None:
+            camera.release()
+            camera = None
+            return {"status": "released", "message": "Camera released successfully"}
+        else:
+            return {"status": "not_active", "message": "Camera was not active"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
