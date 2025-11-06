@@ -1,0 +1,294 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                                                                               ║
+║   🏗️  AI-POWERED CONSTRUCTION SAFETY INTELLIGENCE SYSTEM                     ║
+║                                                                               ║
+║   ✅ INTEGRATION COMPLETE - PROJECT READY FOR DEVELOPMENT                     ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 📂 PROJECT STRUCTURE                                                          │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+d:\devhack3\
+│
+├── 📁 frontend/              ← React + TypeScript Dashboard (Port 5173)
+│   ├── src/
+│   │   ├── components/      Dashboard, Alerts, Monitoring, Workers, Zones
+│   │   ├── context/         Global state management
+│   │   ├── services/        API integration, PDF generation
+│   │   └── styles/          TailwindCSS & global styles
+│   ├── Dockerfile           Docker container config
+│   ├── .env.example         Environment template
+│   └── README.md            Frontend documentation
+│
+├── 📁 backend/               ← FastAPI REST API (Port 8000)
+│   ├── app.py               Main API application
+│   ├── requirements.txt     Python dependencies
+│   ├── Dockerfile           Docker container config
+│   └── README.md            Backend documentation
+│
+├── 📁 vision/                ← OpenCV Computer Vision Processing
+│   ├── main.py              Main processing loop
+│   ├── detector.py          Person detection
+│   ├── ppe.py               PPE detection (helmet/vest)
+│   ├── zones.py             Zone management
+│   ├── config.yaml          Configuration (camera, zones, HSV)
+│   ├── frames/              Saved alert snapshots
+│   ├── requirements.txt     Python dependencies
+│   ├── Dockerfile           Docker container config
+│   └── README.md            Vision documentation
+│
+├── 📄 README.md             Main project documentation
+├── 📄 SETUP.md              Quick start guide
+├── 📄 PROJECT_SUMMARY.md    Complete system overview
+├── 📄 INTEGRATION_COMPLETE.md  Integration details
+├── 📄 CONTRIBUTING.md       Contribution guidelines
+├── 🐳 docker-compose.yml    Docker orchestration (all 3 services)
+├── ⚙️  .env.example          Environment variables template
+├── 🚫 .gitignore            Git ignore rules
+├── ▶️  start.ps1             Windows startup script
+├── ▶️  start.sh              Linux/Mac startup script
+└── 🔧 init.ps1              First-time initialization script
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 🚀 QUICK START                                                                │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+FIRST TIME SETUP:
+  .\init.ps1
+
+EVERY TIME (Start All Services):
+  .\start.ps1
+
+OR WITH DOCKER:
+  docker-compose up -d
+
+ACCESS POINTS:
+  📊 Dashboard:    http://localhost:5173
+  🔌 Backend API:  http://localhost:8000
+  📚 API Docs:     http://localhost:8000/docs
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ ⚙️  CONFIGURATION FILES                                                       │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+.env                         Root environment variables
+frontend/.env               Frontend API URL
+vision/config.yaml          Camera, zones, PPE detection settings
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 🔗 SYSTEM INTEGRATION                                                         │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+    FRONTEND (React)          BACKEND (FastAPI)       VISION (OpenCV)
+         |                          |                        |
+         |  GET /alerts             |                        |
+         |  GET /stats              |                        |
+         |<------------------------>|                        |
+         |                          |<----- POST /alerts ----|
+         |                          |       (frame snaps)    |
+         |                          |                        |
+    Port 5173                  Port 8000              Camera Input
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 📊 KEY FEATURES                                                               │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+✅ Real-Time PPE Detection      Helmet & vest detection using HSV
+✅ Zone Management              Polygon-based restricted areas
+✅ Alert System                 Automated alerts with snapshots
+✅ Live Monitoring              Camera feeds with AI overlays
+✅ Worker Profiles              Individual compliance tracking
+✅ Reports & Analytics          Safety trends and heatmaps
+✅ Training & Gamification      Safety training modules
+✅ Digital Permits              Work permit management
+✅ ESG Analytics                Environmental metrics
+✅ Emergency Evacuation         Real-time guidance system
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 🎨 TECHNOLOGY STACK                                                           │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+FRONTEND:
+  • React 18 + TypeScript       Modern UI framework
+  • Vite                        Lightning-fast build tool
+  • TailwindCSS                 Utility-first styling
+  • Radix UI                    Accessible components
+  • Recharts                    Data visualization
+  • TensorFlow.js               In-browser AI
+
+BACKEND:
+  • FastAPI                     High-performance Python API
+  • Pydantic                    Data validation
+  • Uvicorn                     ASGI server
+  • CORS                        Cross-origin support
+
+VISION:
+  • OpenCV                      Computer vision library
+  • NumPy                       Numerical computing
+  • YAML                        Configuration management
+  • Requests                    HTTP client for API
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 🎯 NEXT STEPS                                                                 │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+1. ✅ Run first-time setup:
+   .\init.ps1
+
+2. 📝 Configure environment:
+   - Edit .env file
+   - Set camera source in vision/config.yaml
+   - Define safety zones (polygon coordinates)
+   - Adjust HSV color ranges for PPE
+
+3. ▶️  Start the system:
+   .\start.ps1
+
+4. 🌐 Open dashboard:
+   http://localhost:5173
+
+5. 🧪 Test integration:
+   - Backend API: http://localhost:8000/docs
+   - Test PPE detection with camera
+   - Review alerts in dashboard
+
+6. 🎨 Customize:
+   - Add workers to system
+   - Configure alert thresholds
+   - Set up training modules
+   - Create digital permits
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 📚 DOCUMENTATION                                                              │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+README.md                    Main project overview & architecture
+SETUP.md                     Detailed setup instructions & troubleshooting
+PROJECT_SUMMARY.md           Complete technical documentation
+INTEGRATION_COMPLETE.md      Integration summary & checklist
+CONTRIBUTING.md              How to contribute to the project
+
+frontend/README.md           Frontend-specific documentation
+backend/README.md            Backend API documentation
+vision/README.md             Vision processing & calibration
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 🎨 DESIGN SYSTEM                                                              │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+COLOR PALETTE (Nordic-Inspired):
+  Safety Orange   #FF7A00   Primary actions, alerts
+  Dark Gray       #1E1E1E   Backgrounds, text
+  Steel Blue      #3A4E7A   Secondary elements
+  White           #FFFFFF   Content areas
+
+TYPOGRAPHY:
+  Font: Inter / Poppkins (sans-serif)
+  Professional, clean, modern aesthetic
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 🔧 DEVELOPMENT WORKFLOW                                                       │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+OPTION 1 - Integrated (Recommended for Testing):
+  .\start.ps1                Starts all services
+
+OPTION 2 - Individual (Better for Development):
+
+  Terminal 1 - Backend:
+    cd backend
+    .\venv\Scripts\activate
+    uvicorn app:app --reload
+
+  Terminal 2 - Vision:
+    cd vision
+    .\myvenv\Scripts\activate
+    python main.py
+
+  Terminal 3 - Frontend:
+    cd frontend
+    npm run dev
+
+OPTION 3 - Docker (Production-like):
+  docker-compose up -d
+  docker-compose logs -f
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ ⚠️  IMPORTANT NOTES                                                           │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+• Default camera: Index 0 (change in vision/config.yaml)
+• For IP camera: Use RTSP URL in config.yaml
+• CORS enabled for localhost:5173
+• Default login: admin / admin123 (change in production!)
+• Alerts stored in-memory (add DB for production)
+• Frame snapshots saved in vision/frames/
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 🐛 TROUBLESHOOTING                                                            │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+Port already in use:
+  netstat -ano | findstr :8000
+  taskkill /PID <PID> /F
+
+Camera not working:
+  1. Check vision/config.yaml
+  2. Try video_source: 1 or 2
+  3. Use RTSP URL for IP camera
+
+Dependencies failed:
+  python -m pip install --upgrade pip
+  pip install -r requirements.txt
+
+Frontend issues:
+  rm -rf node_modules
+  npm install
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ ✅ INTEGRATION CHECKLIST                                                      │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+[✓] Reorganized folder structure (frontend, backend, vision)
+[✓] Created Docker Compose configuration
+[✓] Added startup scripts (Windows & Linux)
+[✓] Environment configuration templates
+[✓] CORS integration for frontend-backend
+[✓] Comprehensive documentation (9 files)
+[✓] Git ignore rules
+[✓] First-time initialization script
+[✓] Requirements files for all components
+[✓] README files for each module
+[✓] Dockerfiles for containerization
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 🎉 STATUS                                                                     │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+✅ INTEGRATION COMPLETE
+✅ ALL DOCUMENTATION CREATED
+✅ READY FOR DEVELOPMENT
+
+Repository:  code_martians (Amruthms)
+Date:        November 7, 2025
+Team:        Code Martians
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 🚀 READY TO START!                                                            │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+Run this command to begin:
+  .\init.ps1
+
+Then start the system:
+  .\start.ps1
+
+Access the dashboard:
+  http://localhost:5173
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Built with ❤️ for Construction Safety
+  AI-Powered Construction Site Safety Intelligence System

@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # Frontend - React Dashboard
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - safety-network
+
+  # Backend - FastAPI Server
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./vision/frames:/app/frames
+    networks:
+      - safety-network
+    restart: unless-stopped
+
+  # Vision - OpenCV Processing
+  vision:
+    build:
+      context: ./vision
+      dockerfile: Dockerfile
+    environment:
+      - BACKEND_URL=http://backend:8000
+    volumes:
+      - ./vision:/app
+      - ./vision/frames:/app/frames
+    depends_on:
+      - backend
+    networks:
+      - safety-network
+    restart: unless-stopped
+    # Uncomment if you need access to host camera
+    # devices:
+    #   - /dev/video0:/dev/video0
+    privileged: true
+
+networks:
+  safety-network:
+    driver: bridge
+
+volumes:
+  frames_data:
