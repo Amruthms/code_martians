@@ -1,0 +1,67 @@
+# Vision Processing Configuration
+# Construction Safety Intelligence System
+
+# Camera Configuration
+video_source: 0  # 0 for default webcam, or path to video file
+frame_width: 1280
+frame_height: 720
+fps: 30
+
+# Detection Configuration
+detection:
+  confidence_threshold: 0.6
+  person_detection_enabled: true
+  ppe_detection_enabled: true
+  zone_monitoring_enabled: true
+
+# PPE Detection Settings
+ppe:
+  helmet_detection: true
+  vest_detection: true
+  # HSV color ranges for helmet detection (yellow/orange)
+  helmet_hsv_lower: [15, 100, 100]
+  helmet_hsv_upper: [35, 255, 255]
+  # HSV color ranges for vest detection (orange/yellow)
+  vest_hsv_lower: [10, 100, 100]
+  vest_hsv_upper: [40, 255, 255]
+  
+# Zone Configuration
+zones:
+  - name: "Restricted Area"
+    id: 1
+    type: "restricted"
+    polygon: [[100, 100], [300, 100], [300, 300], [100, 300]]
+    color: [0, 0, 255]  # Red in BGR
+    
+  - name: "Hard Hat Zone"
+    id: 2
+    type: "ppe_required"
+    polygon: [[400, 100], [600, 100], [600, 300], [400, 300]]
+    color: [0, 255, 255]  # Yellow in BGR
+    required_ppe: ["helmet"]
+
+# Proximity Detection
+proximity:
+  enabled: true
+  min_distance_meters: 2.0
+  warning_distance_meters: 1.5
+
+# Alert Configuration
+alerts:
+  backend_url: "http://localhost:8000/alerts"
+  emit_interval_seconds: 1.0
+  max_retries: 3
+  
+# Display Configuration
+display:
+  show_window: true
+  window_name: "Construction Safety Monitoring"
+  save_frames: false
+  frames_directory: "frames"
+  draw_detections: true
+  draw_zones: true
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  log_file: "vision.log"
