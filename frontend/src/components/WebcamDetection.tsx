@@ -45,25 +45,22 @@ export function WebcamDetection() {
 
       // Call backend API to start vision processing
       const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
-      const response = await fetch(`${apiUrl}/vision/start`, {
-        method: "POST",
-      });
 
-      const data = await response.json();
-
-      if (data.status === "started" || data.status === "already_running") {
-        setIsStreaming(true);
-        setIsLoadingModel(false);
-        updateCameraFeed(9, { streamActive: true, status: "safe" });
-
-        // Start polling for detection status
-        startStatusPolling();
-
-        // Show success message
-        setError(null);
-      } else {
-        throw new Error(data.message || "Failed to start vision processing");
+      // Start the video stream by setting the video source
+      if (videoRef.current) {
+        videoRef.current.src = `${apiUrl}/video_feed`;
+        videoRef.current.play();
       }
+
+      setIsStreaming(true);
+      setIsLoadingModel(false);
+      updateCameraFeed(9, { streamActive: true, status: "safe" });
+
+      // Start polling for alerts
+      startStatusPolling();
+
+      // Show success message
+      setError(null);
     } catch (error: any) {
       console.error("Error starting vision processing:", error);
 
@@ -79,14 +76,11 @@ export function WebcamDetection() {
 
   const stopWebcam = async () => {
     try {
-      // Call backend API to stop vision processing
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
-      const response = await fetch(`${apiUrl}/vision/stop`, {
-        method: "POST",
-      });
-
-      const data = await response.json();
-      console.log("Vision stopped:", data);
+      // Stop the video stream
+      if (videoRef.current) {
+        videoRef.current.src = "";
+        videoRef.current.load();
+      }
     } catch (error) {
       console.error("Error stopping vision processing:", error);
     }
@@ -111,23 +105,6 @@ export function WebcamDetection() {
     detectionIntervalRef.current = window.setInterval(async () => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
-
-        // Check vision status
-        const statusResponse = await fetch(`${apiUrl}/vision/status`);
-        const statusData = await statusResponse.json();
-
-        if (!statusData.running) {
-          // Vision process stopped
-          setIsStreaming(false);
-          setError(
-            'Vision processing stopped unexpectedly. Click "Start OpenCV Camera" to restart.'
-          );
-          if (detectionIntervalRef.current) {
-            clearInterval(detectionIntervalRef.current);
-            detectionIntervalRef.current = null;
-          }
-          return;
-        }
 
         // Fetch latest alerts
         const alertsResponse = await fetch(`${apiUrl}/alerts`);
@@ -352,8 +329,16 @@ export function WebcamDetection() {
           <video
             ref={videoRef}
             className="w-full h-full object-cover"
+            autoPlay
             playsInline
             muted
+            onError={(e) => {
+              console.error("Video stream error:", e);
+              setError(
+                "Failed to load video stream. Please check your camera connection."
+              );
+              setIsStreaming(false);
+            }}
           />
           <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
