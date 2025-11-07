@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -7,9 +7,6 @@ import {
   Video,
   VideoOff,
   AlertTriangle,
-  Settings,
-  RefreshCw,
-  Maximize2,
   Grid3x3,
 } from "lucide-react";
 
@@ -25,66 +22,71 @@ interface CameraFeed {
 }
 
 export function MultiCameraGrid() {
-  const [cameras, setCameras] = useState<CameraFeed[]>([]);
-  const [selectedCameras, setSelectedCameras] = useState<string[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [layout, setLayout] = useState<"2x2" | "1x4">("2x2");
-  const [error, setError] = useState<string | null>(null);
-
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-  useEffect(() => {
-    fetchCameras();
-  }, []);
+  // Hardcoded 4 IP camera feeds with YOLOv8 detection - YOUR ACTUAL PHONE IPs
+  const [cameras] = useState<CameraFeed[]>([
+    {
+      id: "camera-1",
+      name: "Phone - North Zone",
+      type: "ip",
+      source: "http://172.21.0.187:8080/video",
+      url: `${apiUrl}/video_feed?source=${encodeURIComponent("http://172.21.0.187:8080/video")}`,
+      active: true,
+      status: "idle",
+      region: "North",
+    },
+    {
+      id: "camera-2",
+      name: "Phone - East Zone",
+      type: "ip",
+      source: "http://172.21.4.168:8080/video",
+      url: `${apiUrl}/video_feed?source=${encodeURIComponent("http://172.21.4.168:8080/video")}`,
+      active: true,
+      status: "idle",
+      region: "East",
+    },
+    {
+      id: "camera-3",
+      name: "Phone - South Zone",
+      type: "ip",
+      source: "http://172.21.13.136:8080/video",
+      url: `${apiUrl}/video_feed?source=${encodeURIComponent("http://172.21.13.136:8080/video")}`,
+      active: true,
+      status: "idle",
+      region: "South",
+    },
+    {
+      id: "camera-4",
+      name: "Phone - West Zone",
+      type: "ip",
+      source: "http://172.21.2.118:8080/video",
+      url: `${apiUrl}/video_feed?source=${encodeURIComponent("http://172.21.2.118:8080/video")}`,
+      active: true,
+      status: "idle",
+      region: "West",
+    },
+  ]);
 
-  const fetchCameras = async () => {
-    try {
-      const response = await fetch(`${apiUrl}/camera/sources`);
-      const data = await response.json();
-
-      const cameraFeeds: CameraFeed[] = data.sources.map(
-        (source: any, index: number) => ({
-          id: `${source.type}-${source.index || source.url}-${index}`,
-          name: source.name,
-          type: source.type,
-          source: source.index || source.url,
-          url:
-            source.type === "local"
-              ? `${apiUrl}/video_feed?source=${source.index}&t=${Date.now()}`
-              : `${apiUrl}/video_feed?source=${encodeURIComponent(
-                  source.url
-                )}&t=${Date.now()}`,
-          active: source.active || false,
-          status: "idle",
-          region: extractRegion(source.name),
-        })
-      );
-
-      setCameras(cameraFeeds);
-    } catch (error) {
-      console.error("Error fetching cameras:", error);
-      setError("Failed to load cameras");
-    }
-  };
-
-  const extractRegion = (name: string): string => {
-    const lowerName = name.toLowerCase();
-    if (lowerName.includes("north")) return "North";
-    if (lowerName.includes("east")) return "East";
-    if (lowerName.includes("south")) return "South";
-    if (lowerName.includes("west")) return "West";
-    if (lowerName.includes("central") || lowerName.includes("main"))
-      return "Central";
-    return "Unknown";
-  };
+  // Auto-select all 4 cameras by default
+  const [selectedCameras, setSelectedCameras] = useState<string[]>([
+    "camera-1",
+    "camera-2",
+    "camera-3",
+    "camera-4",
+  ]);
+  // Auto-start streaming on component mount
+  const [isStreaming, setIsStreaming] = useState(true);
+  const [layout, setLayout] = useState<"2x2" | "1x4" | "3x3">("2x2");
+  const [error, setError] = useState<string | null>(null);
 
   const toggleCamera = (cameraId: string) => {
     setSelectedCameras((prev) => {
       if (prev.includes(cameraId)) {
         return prev.filter((id) => id !== cameraId);
       } else {
-        // Limit based on layout (both 2x2 and 1x4 support max 4 cameras)
-        const maxCameras = 4;
+        // Limit based on layout
+        const maxCameras = layout === "2x2" ? 4 : layout === "1x4" ? 4 : 9;
         if (prev.length >= maxCameras) {
           return [...prev.slice(1), cameraId]; // Remove oldest, add newest
         }
@@ -117,6 +119,8 @@ export function MultiCameraGrid() {
         return "grid-cols-2 grid-rows-2";
       case "1x4":
         return "grid-cols-4 grid-rows-1";
+      case "3x3":
+        return "grid-cols-3 grid-rows-3";
       default:
         return "grid-cols-2 grid-rows-2";
     }
@@ -137,15 +141,6 @@ export function MultiCameraGrid() {
               Multi-Camera Regional Monitoring
             </CardTitle>
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={fetchCameras}
-                className="border-gray-700 text-gray-300 hover:bg-gray-800"
-              >
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Refresh
-              </Button>
               {isStreaming ? (
                 <Button
                   size="sm"
@@ -203,7 +198,7 @@ export function MultiCameraGrid() {
           {/* Camera Selection */}
           <div className="space-y-2">
             <span className="text-sm text-gray-400">
-              Select Cameras by Region:
+              Select Cameras by Region (All 4 Selected):
             </span>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {cameras.map((camera) => (
@@ -216,17 +211,15 @@ export function MultiCameraGrid() {
                   onClick={() => toggleCamera(camera.id)}
                   className={
                     selectedCameras.includes(camera.id)
-                      ? "bg-[#FF7A00] text-white"
-                      : "border-gray-700 text-gray-300 hover:bg-gray-800"
+                      ? "bg-[#FF7A00] text-white hover:bg-white hover:text-black"
+                      : "border-gray-700 text-white hover:bg-[#FF7A00] hover:text-black"
                   }
                 >
                   <Video className="h-3 w-3 mr-1" />
                   {camera.name}
-                  {camera.region !== "Unknown" && (
-                    <Badge className="ml-2 text-xs bg-blue-500/20 text-blue-400">
-                      {camera.region}
-                    </Badge>
-                  )}
+                  <Badge className="ml-2 text-xs bg-blue-500/20 text-blue-400">
+                    {camera.region}
+                  </Badge>
                 </Button>
               ))}
             </div>
@@ -314,22 +307,28 @@ export function MultiCameraGrid() {
       <Card className="bg-blue-500/10 border-blue-500/50">
         <CardContent className="pt-4">
           <h4 className="text-sm font-medium text-blue-400 mb-2">
-            📱 How to Set Up Regional Phone Cameras:
+            📱 Active Camera Configuration (Auto-Started):
           </h4>
           <ol className="text-xs text-blue-300 space-y-1 list-decimal list-inside">
-            <li>Install IP Webcam on each phone you want to use</li>
             <li>
-              Position phones in different regions: North, East, South, West,
-              etc.
+              <strong>North Zone:</strong> http://172.21.0.187:8080/video
             </li>
             <li>
-              Name each camera in Settings → Cameras (e.g., "Phone - North
-              Entrance")
+              <strong>East Zone:</strong> http://172.21.4.168:8080/video
             </li>
-            <li>Add each phone: http://PHONE_IP:8080/video</li>
-            <li>Return here and select cameras by region</li>
             <li>
-              Click "Start Selected" to monitor all regions simultaneously!
+              <strong>South Zone:</strong> http://172.21.13.136:8080/video
+            </li>
+            <li>
+              <strong>West Zone:</strong> http://172.21.2.118:8080/video
+            </li>
+            <li>
+              All cameras stream through backend with YOLOv8 helmet & vest
+              detection
+            </li>
+            <li>
+              Cameras start automatically on page load - monitoring all 4 zones
+              simultaneously!
             </li>
           </ol>
         </CardContent>
