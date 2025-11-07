@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -11,7 +11,9 @@ import {
   Camera,
   FileText,
   Trash2,
-  Download
+  Download,
+  Video,
+  VideoOff
 } from 'lucide-react';
 import {
   Table,
@@ -23,13 +25,15 @@ import {
 } from '../ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useApp } from '../../context/AppContext';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { generateIncidentReport } from '../../services/pdfGenerator';
 
 export function AlertsIncidents() {
   const { alerts, updateAlertStatus, deleteAlert } = useApp();
   const [selectedAlert, setSelectedAlert] = useState(alerts[0]);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [cameraActive, setCameraActive] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   const filteredAlerts = filterStatus === 'all' 
     ? alerts 
@@ -74,6 +78,24 @@ export function AlertsIncidents() {
       toast.error('Download Failed', {
         description: 'Unable to generate incident report',
       });
+    }
+  };
+
+  const startCamera = () => {
+    if (imgRef.current) {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const streamUrl = `${apiUrl}/video_feed?cache=${Date.now()}`;
+      imgRef.current.src = streamUrl;
+      setCameraActive(true);
+      toast.success('Camera Started', { description: 'Live webcam feed is now active' });
+    }
+  };
+
+  const stopCamera = () => {
+    if (imgRef.current) {
+      imgRef.current.src = '';
+      setCameraActive(false);
+      toast.info('Camera Stopped', { description: 'Live feed has been stopped' });
     }
   };
 
@@ -233,11 +255,50 @@ export function AlertsIncidents() {
                 <CardTitle className="text-white">Alert Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Snapshot Preview */}
+                {/* Live Camera Feed */}
                 <div>
-                  <div className="text-sm mb-2 text-gray-400">Camera Snapshot</div>
-                  <div className="aspect-video bg-black rounded-lg flex items-center justify-center border-2 border-red-500">
-                    <Camera className="h-12 w-12 text-gray-600" />
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm text-gray-400">Camera Snapshot</div>
+                    {!cameraActive ? (
+                      <Button 
+                        size="sm" 
+                        onClick={startCamera}
+                        className="h-7 text-xs bg-[#FF7A00] hover:bg-[#FF7A00]/90"
+                      >
+                        <Video className="h-3 w-3 mr-1" />
+                        Start Live Feed
+                      </Button>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        onClick={stopCamera}
+                        variant="outline"
+                        className="h-7 text-xs border-red-500 text-red-400 hover:bg-red-500/10"
+                      >
+                        <VideoOff className="h-3 w-3 mr-1" />
+                        Stop
+                      </Button>
+                    )}
+                  </div>
+                  <div className="aspect-video bg-black rounded-lg flex items-center justify-center border-2 border-red-500 overflow-hidden relative">
+                    {cameraActive ? (
+                      <>
+                        <img
+                          ref={imgRef}
+                          className="absolute inset-0 w-full h-full object-contain"
+                          alt="Live Camera Feed"
+                        />
+                        <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm px-2 py-1 rounded flex items-center gap-1">
+                          <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                          <span className="text-white text-xs font-medium">LIVE</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <Camera className="h-12 w-12 text-gray-600" />
+                        <p className="text-xs text-gray-500">Click "Start Live Feed" to view camera</p>
+                      </div>
+                    )}
                   </div>
                   <div className="mt-2 text-xs text-gray-400">
                     AI Confidence: {selectedAlert.confidence}%
