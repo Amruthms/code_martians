@@ -28,7 +28,7 @@ export function MultiCameraGrid() {
   const [cameras, setCameras] = useState<CameraFeed[]>([]);
   const [selectedCameras, setSelectedCameras] = useState<string[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [layout, setLayout] = useState<"2x2" | "1x4" | "3x3">("2x2");
+  const [layout, setLayout] = useState<"2x2" | "1x4">("2x2");
   const [error, setError] = useState<string | null>(null);
 
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -83,8 +83,8 @@ export function MultiCameraGrid() {
       if (prev.includes(cameraId)) {
         return prev.filter((id) => id !== cameraId);
       } else {
-        // Limit based on layout
-        const maxCameras = layout === "2x2" ? 4 : layout === "1x4" ? 4 : 9;
+        // Limit based on layout (both 2x2 and 1x4 support max 4 cameras)
+        const maxCameras = 4;
         if (prev.length >= maxCameras) {
           return [...prev.slice(1), cameraId]; // Remove oldest, add newest
         }
@@ -117,8 +117,6 @@ export function MultiCameraGrid() {
         return "grid-cols-2 grid-rows-2";
       case "1x4":
         return "grid-cols-4 grid-rows-1";
-      case "3x3":
-        return "grid-cols-3 grid-rows-3";
       default:
         return "grid-cols-2 grid-rows-2";
     }
@@ -199,18 +197,6 @@ export function MultiCameraGrid() {
               }
             >
               1×4 Row
-            </Button>
-            <Button
-              size="sm"
-              variant={layout === "3x3" ? "default" : "outline"}
-              onClick={() => setLayout("3x3")}
-              className={
-                layout === "3x3"
-                  ? "bg-[#FF7A00]"
-                  : "border-gray-700 text-gray-300"
-              }
-            >
-              3×3 Grid
             </Button>
           </div>
 
