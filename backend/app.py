@@ -223,16 +223,27 @@ def get_yolo_model():
 def generate_frames(source=None):
     """Generate video frames with YOLOv8 detections"""
     
-    # Initialize YOLOv8 model
-    model = get_yolo_model()
-    
     cam = get_camera(source)
     frame_count = 0
+    
+    # Pre-load model in background to avoid blocking first frames
+    model = None
+    model_loading = True
+    
+    def load_model_async():
+        nonlocal model, model_loading
+        model = get_yolo_model()
+        model_loading = False
+        print("[INFO] YOLOv8 model loaded and ready for inference")
+    
+    # Start loading model in background
+    import threading
+    threading.Thread(target=load_model_async, daemon=True).start()
     
     while True:
         success, frame = cam.read()
         if not success:
-            print("Failed to read frame from camera")
+            print("[ERROR] Failed to read frame from camera")
             break
         
         try:
@@ -244,66 +255,73 @@ def generate_frames(source=None):
             
             frame_count += 1
             
-            # Run YOLOv8 prediction
-            results = model.predict(frame, conf=0.5, verbose=False)[0]
-            
-            # Get annotated frame with bounding boxes
-            annotated_frame = results.plot()
-            
-            # Count violations for alerts
-            violation_count = 0
-            no_helmet_count = 0
-            no_vest_count = 0
-            
-            # Parse detections for alert generation
-            if results.boxes is not None:
-                for box in results.boxes:
-                    cls_id = int(box.cls[0])
-                    class_name = model.names[cls_id]
-                    conf = float(box.conf[0])
-                    
-                    # Check for violations
-                    if 'NO-Hardhat' in class_name or 'NO-Safety Vest' in class_name:
-                        violation_count += 1
-                        
-                        if 'NO-Hardhat' in class_name:
-                            no_helmet_count += 1
-                        if 'NO-Safety Vest' in class_name:
-                            no_vest_count += 1
-            
-            # Send alerts every 30 frames (once per second at 30fps)
-            if frame_count % 30 == 0:
-                if no_helmet_count > 0:
-                    ALERTS.append({
-                        "type": "NO_HELMET",
-                        "ts": int(time.time() * 1000),
-                        "zone": None,
-                        "frame_path": None,
-                        "meta": {"count": no_helmet_count}
-                    })
+            # If model is still loading, send raw frames with loading message
+            if model_loading or model is None:
+                annotated_frame = frame.copy()
+                cv2.rectangle(annotated_frame, (5, 5), (350, 45), (0, 0, 0), -1)
+                cv2.putText(annotated_frame, "Loading AI Model...", (15, 35), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 165, 255), 2)
+            else:
+                # Run YOLOv8 prediction
+                results = model.predict(frame, conf=0.5, verbose=False)[0]
                 
-                if no_vest_count > 0:
-                    ALERTS.append({
-                        "type": "NO_VEST",
-                        "ts": int(time.time() * 1000),
-                        "zone": None,
-                        "frame_path": None,
-                        "meta": {"count": no_vest_count}
-                    })
-            
-            # Add "LIVE" indicator
-            cv2.rectangle(annotated_frame, (5, 5), (120, 45), (0, 0, 0), -1)
-            cv2.putText(annotated_frame, "LIVE", (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            
-            # Add detection counts
-            total_detections = len(results.boxes) if results.boxes is not None else 0
-            cv2.putText(annotated_frame, f"Detections: {total_detections}", (10, 70), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-            cv2.putText(annotated_frame, f"Violations: {violation_count}", (10, 95), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255) if violation_count > 0 else (0, 255, 0), 2)
+                # Get annotated frame with bounding boxes
+                annotated_frame = results.plot()
+                
+                # Count violations for alerts
+                violation_count = 0
+                no_helmet_count = 0
+                no_vest_count = 0
+                
+                # Parse detections for alert generation
+                if results.boxes is not None:
+                    for box in results.boxes:
+                        cls_id = int(box.cls[0])
+                        class_name = model.names[cls_id]
+                        conf = float(box.conf[0])
+                        
+                        # Check for violations
+                        if 'NO-Hardhat' in class_name or 'NO-Safety Vest' in class_name:
+                            violation_count += 1
+                            
+                            if 'NO-Hardhat' in class_name:
+                                no_helmet_count += 1
+                            if 'NO-Safety Vest' in class_name:
+                                no_vest_count += 1
+                
+                # Send alerts every 30 frames (once per second at 30fps)
+                if frame_count % 30 == 0:
+                    if no_helmet_count > 0:
+                        ALERTS.append({
+                            "type": "NO_HELMET",
+                            "ts": int(time.time() * 1000),
+                            "zone": None,
+                            "frame_path": None,
+                            "meta": {"count": no_helmet_count}
+                        })
+                    
+                    if no_vest_count > 0:
+                        ALERTS.append({
+                            "type": "NO_VEST",
+                            "ts": int(time.time() * 1000),
+                            "zone": None,
+                            "frame_path": None,
+                            "meta": {"count": no_vest_count}
+                        })
+                
+                # Add "LIVE" indicator
+                cv2.rectangle(annotated_frame, (5, 5), (120, 45), (0, 0, 0), -1)
+                cv2.putText(annotated_frame, "LIVE", (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                
+                # Add detection counts
+                total_detections = len(results.boxes) if results.boxes is not None else 0
+                cv2.putText(annotated_frame, f"Detections: {total_detections}", (10, 70), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                cv2.putText(annotated_frame, f"Violations: {violation_count}", (10, 95), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255) if violation_count > 0 else (0, 255, 0), 2)
             
         except Exception as e:
-            print(f"Frame processing error: {e}")
+            print(f"[ERROR] Frame processing error: {e}")
             import traceback
             traceback.print_exc()
             annotated_frame = frame

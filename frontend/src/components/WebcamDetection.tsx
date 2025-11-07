@@ -28,6 +28,7 @@ export function WebcamDetection() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isLoadingModel, setIsLoadingModel] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [streamKey, setStreamKey] = useState(0); // Force img re-render
   const [cameraSources, setCameraSources] = useState<any[]>([]);
   const [selectedCamera, setSelectedCamera] = useState<string>("");
   const [detectionStatus, setDetectionStatus] = useState<{
@@ -106,50 +107,57 @@ export function WebcamDetection() {
     try {
       setError(null);
       setIsLoadingModel(true);
+      console.log("🎥 Starting webcam...");
 
-      // Call backend API to start vision processing
       const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+      // First, verify the backend is accessible
+      try {
+        console.log("🔍 Checking backend health...");
+        const healthCheck = await fetch(`${apiUrl}/docs`, { method: 'HEAD' });
+        if (!healthCheck.ok) {
+          throw new Error("Backend server is not responding");
+        }
+        console.log("✅ Backend is running");
+      } catch (err) {
+        console.error("❌ Backend check failed:", err);
+        setError("Cannot connect to backend server. Please ensure it's running on port 8000.");
+        setIsLoadingModel(false);
+        return;
+      }
 
       // Set the image source to the video feed endpoint
       if (imgRef.current) {
-        // Clear any previous handlers
-        imgRef.current.onload = null;
-        imgRef.current.onerror = null;
+        console.log("🎬 Setting up video stream...");
+        
+        // Force a new key to ensure fresh render
+        const newKey = Date.now();
+        setStreamKey(newKey);
 
-        // Set up new handlers before setting src
-        imgRef.current.onload = () => {
-          console.log("Video stream loaded successfully");
+        // Wait for React to re-render with new key
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        // Now set the src directly on the DOM element
+        const streamUrl = `${apiUrl}/video_feed?cache=${newKey}`;
+        console.log("📡 Setting stream URL:", streamUrl);
+        
+        if (imgRef.current) {
+          imgRef.current.src = streamUrl;
+          console.log("✅ Image src set directly on DOM");
+        }
+
+        // Immediately show as streaming (MJPEG doesn't fire onload reliably)
+        setTimeout(() => {
+          console.log("⚡ Activating stream display");
           setIsStreaming(true);
           setIsLoadingModel(false);
           setError(null);
           updateCameraFeed(9, { streamActive: true, status: "safe" });
           startStatusPolling();
-        };
-
-        imgRef.current.onerror = (e) => {
-          console.error("Failed to load video stream:", e);
-          // Only show error if we're still trying to load
-          if (isLoadingModel) {
-            setError(
-              "Failed to connect to video stream. Please ensure the backend is running."
-            );
-          }
-          setIsStreaming(false);
-          setIsLoadingModel(false);
-        };
-
-        // Set the source with timestamp to avoid caching
-        imgRef.current.src = `${apiUrl}/video_feed?t=${Date.now()}`;
+        }, 500);
       }
-
-      // Give it a moment to start loading
-      setTimeout(() => {
-        if (!isStreaming && isLoadingModel) {
-          setIsLoadingModel(false);
-        }
-      }, 5000);
     } catch (error: any) {
-      console.error("Error starting vision processing:", error);
+      console.error("❌ Error starting vision processing:", error);
 
       let errorMessage = "Unable to start vision processing. ";
       errorMessage +=
@@ -447,12 +455,14 @@ export function WebcamDetection() {
         )}
 
         <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-          {/* Use img tag for MJPEG stream instead of video tag */}
+          {/* MJPEG stream - direct img tag (works in most browsers) */}
           <img
+            key={streamKey}
             ref={imgRef}
-            className={`w-full h-full object-cover ${
-              isStreaming ? "block" : "hidden"
-            }`}
+            className="absolute inset-0 w-full h-full object-contain"
+            style={{ 
+              display: 'block'
+            }}
             alt="Live Camera Feed"
           />
           <canvas
@@ -460,6 +470,23 @@ export function WebcamDetection() {
             className="absolute inset-0 w-full h-full pointer-events-none"
             style={{ display: "none" }}
           />
+
+          {/* Debug info overlay when streaming but image might not be visible */}
+          {isStreaming && imgRef.current && (
+            <div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-sm px-3 py-2 rounded-lg text-xs text-white space-y-1">
+              <div>Stream URL: {imgRef.current.src ? '✅ Set' : '❌ Not Set'}</div>
+              <div>Image Loaded: {imgRef.current.complete ? '✅ Yes' : '⏳ Loading...'}</div>
+              <div>Natural Size: {imgRef.current.naturalWidth}x{imgRef.current.naturalHeight}</div>
+              {imgRef.current.naturalWidth === 0 && (
+                <button
+                  onClick={() => window.open(imgRef.current?.src, '_blank', 'width=1280,height=720')}
+                  className="mt-2 px-3 py-1 bg-orange-600 hover:bg-orange-700 rounded text-white text-xs"
+                >
+                  📺 Open in New Window
+                </button>
+              )}
+            </div>
+          )}
 
           {!isStreaming && !error && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
