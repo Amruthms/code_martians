@@ -540,40 +540,48 @@ export function SiteMap() {
               </div>
 
               {/* Status Bar */}
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="rounded-xl bg-black p-4 border border-gray-800 hover:border-gray-700 transition-colors">
-                  <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
-                    <Users className="h-4 w-4" />
-                    Workers
-                  </div>
-                  <div className="text-white text-2xl font-bold">{workerPositions.length}</div>
-                </div>
-                
-                <div className="rounded-xl bg-black p-4 border border-gray-800 hover:border-gray-700 transition-colors">
-                  <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
-                    <Construction className="h-4 w-4" />
-                    Machines
-                  </div>
-                  <div className="text-white text-2xl font-bold">
-                    {machines.filter(m => m.status === 'active').length}/{machines.length}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
+                      <Users className="h-4 w-4" />
+                      <span>Workers</span>
+                    </div>
+                    <div className="text-white text-3xl font-bold">{workerPositions.length}</div>
                   </div>
                 </div>
                 
                 <div className="rounded-xl bg-black p-4 border border-gray-800 hover:border-gray-700 transition-colors">
-                  <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    Danger Zones
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
+                      <Construction className="h-4 w-4" />
+                      <span>Machines</span>
+                    </div>
+                    <div className="text-white text-3xl font-bold">
+                      {machines.filter(m => m.status === 'active').length}/{machines.length}
+                    </div>
                   </div>
-                  <div className="text-white text-2xl font-bold">{heatZones.filter(z => z.type === 'danger').length}</div>
+                </div>
+                
+                <div className="rounded-xl bg-black p-4 border border-gray-800 hover:border-gray-700 transition-colors">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
+                      <AlertTriangle className="h-4 w-4" />
+                      <span>Danger Zones</span>
+                    </div>
+                    <div className="text-white text-3xl font-bold">{heatZones.filter(z => z.type === 'danger').length}</div>
+                  </div>
                 </div>
                 
                 <div className="rounded-xl bg-black p-4 border border-red-500/20 hover:border-red-500/40 transition-colors">
-                  <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
-                    <Zap className="h-4 w-4" />
-                    At Risk
-                  </div>
-                  <div className="text-red-500 text-2xl font-bold">
-                    {workerPositions.filter(w => w.status === 'danger').length}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
+                      <Zap className="h-4 w-4" />
+                      <span>At Risk</span>
+                    </div>
+                    <div className="text-red-500 text-3xl font-bold">
+                      {workerPositions.filter(w => w.status === 'danger').length}
+                    </div>
                   </div>
                 </div>
               </div>

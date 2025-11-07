@@ -14,6 +14,7 @@ import { SettingsPage } from "./components/pages/SettingsPage";
 import { ESGAnalytics } from "./components/pages/ESGAnalytics";
 import { TrainingGamification } from "./components/pages/TrainingGamification";
 import { AdvancedFeatures } from "./components/pages/AdvancedFeatures";
+import { SiteManagementPage } from "./components/pages/SiteManagementPage";
 import { Toaster } from "./components/ui/sonner";
 
 function AppContent() {
@@ -44,6 +45,8 @@ function AppContent() {
         return <AlertsIncidents />;
       case "zones":
         return <ZoneManagement />;
+      case "site-management":
+        return <SiteManagementPage />;
       case "reports":
         return <ReportsPage />;
       case "permits":

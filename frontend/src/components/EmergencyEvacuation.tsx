@@ -26,7 +26,7 @@ export function EmergencyEvacuation() {
     { name: 'Fire Department', number: '110', type: 'fire', apiEndpoint: 'fire' },
     { name: 'Ambulance', number: '113', type: 'ambulance', apiEndpoint: 'ambulance' },
     { name: 'Police', number: '112', type: 'police', apiEndpoint: 'police' },
-    { name: 'Site Manager', number: '+47 123 45 678', type: 'manager', apiEndpoint: 'manager' },
+    { name: 'Site Manager', number: '+91 9342739999', type: 'manager', apiEndpoint: 'manager' },
   ];
 
   const evacuationZones = [

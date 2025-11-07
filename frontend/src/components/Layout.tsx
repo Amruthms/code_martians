@@ -15,7 +15,8 @@ import {
   Users,
   Leaf,
   Trophy,
-  Brain
+  Brain,
+  MapPin
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
@@ -43,6 +44,7 @@ const navigationItems = [
   { id: 'live-monitoring', label: 'Live Monitoring', icon: Video },
   { id: 'alerts', label: 'Alerts & Incidents', icon: AlertTriangle },
   { id: 'zones', label: 'Zones & Sensors', icon: Map },
+  { id: 'site-management', label: 'Site Management', icon: MapPin },
   { id: 'workers', label: 'Workers', icon: Users },
   { id: 'training', label: 'Training & Badges', icon: Trophy },
   { id: 'advanced', label: 'Advanced Features', icon: Brain },
