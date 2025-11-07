@@ -26,8 +26,10 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy and install Python dependencies
+# Install CPU-only PyTorch first to avoid CUDA version (saves ~1.5GB)
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu torch==2.1.0 torchvision==0.16.0 && \
     pip install --no-cache-dir -r requirements.txt
 
 # ========================================
