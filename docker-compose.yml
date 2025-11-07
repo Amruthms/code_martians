@@ -12,8 +12,8 @@ services:
   # ========================================
   yolov8-model:
     build:
-      context: ./yolov8_model
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: yolov8_model/Dockerfile
     container_name: yolov8-model
     volumes:
       - yolo_model:/models
