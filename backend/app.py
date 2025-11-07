@@ -488,6 +488,193 @@ def list_camera_sources():
     }
 
 # ============================================================================
+# MOBILE SENSOR DATA INTEGRATION
+# ============================================================================
+
+# Store sensor data in memory (last 1000 entries)
+SENSOR_DATA_HISTORY: List[Dict[str, Any]] = []
+
+# Pydantic models for sensor data
+class AccelerometerData(BaseModel):
+    x: float
+    y: float
+    z: float
+
+class GyroscopeData(BaseModel):
+    x: float
+    y: float
+    z: float
+
+class MagnetometerData(BaseModel):
+    x: float
+    y: float
+    z: float
+
+class GPSData(BaseModel):
+    latitude: float
+    longitude: float
+    altitude: float
+    speed: float
+    accuracy: float
+
+class SensorDataIn(BaseModel):
+    timestamp: str
+    accelerometer: Optional[AccelerometerData] = None
+    gyroscope: Optional[GyroscopeData] = None
+    magnetometer: Optional[MagnetometerData] = None
+    gps: Optional[GPSData] = None
+    proximity: Optional[float] = None
+    ambientLight: Optional[float] = None
+    pressure: Optional[float] = None
+
+class BatchSensorData(BaseModel):
+    batch: List[SensorDataIn]
+
+@app.post("/api/sensor-data")
+def receive_sensor_data(sensor_data: SensorDataIn):
+    """
+    Receive real-time sensor data from mobile devices (phones/tablets).
+    This endpoint accepts data from the Flutter sensor app.
+    """
+    try:
+        # Convert to dict and add server timestamp
+        data_dict = sensor_data.dict()
+        data_dict["server_received_at"] = int(time.time() * 1000)
+        
+        # Add to history
+        SENSOR_DATA_HISTORY.append(data_dict)
+        
+        # Keep only last 1000 entries
+        if len(SENSOR_DATA_HISTORY) > 1000:
+            SENSOR_DATA_HISTORY.pop(0)
+        
+        # Log for debugging
+        print(f"[SENSOR] Received sensor data: Accel={sensor_data.accelerometer is not None}, "
+              f"Gyro={sensor_data.gyroscope is not None}, GPS={sensor_data.gps is not None}, "
+              f"Light={sensor_data.ambientLight}")
+        
+        # Optional: Generate alerts based on sensor data
+        # Example: High acceleration might indicate a fall
+        if sensor_data.accelerometer:
+            accel_magnitude = (sensor_data.accelerometer.x**2 + 
+                             sensor_data.accelerometer.y**2 + 
+                             sensor_data.accelerometer.z**2)**0.5
+            
+            # Detect potential fall (acceleration > 2g)
+            if accel_magnitude > 19.6:  # 2g in m/s^2
+                ALERTS.append({
+                    "type": "POTENTIAL_FALL",
+                    "ts": int(time.time() * 1000),
+                    "zone": None,
+                    "frame_path": None,
+                    "meta": {
+                        "acceleration": accel_magnitude,
+                        "source": "mobile_sensor"
+                    }
+                })
+                print(f"[ALERT] Potential fall detected! Acceleration: {accel_magnitude:.2f} m/s²")
+        
+        return {
+            "success": True,
+            "message": "Sensor data received successfully",
+            "timestamp": data_dict["server_received_at"],
+            "entries_stored": len(SENSOR_DATA_HISTORY)
+        }
+    
+    except Exception as e:
+        print(f"[ERROR] Failed to process sensor data: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/sensor-data/batch")
+def receive_batch_sensor_data(batch_data: BatchSensorData):
+    """Receive batch sensor data from mobile devices"""
+    try:
+        received_count = len(batch_data.batch)
+        
+        for sensor_data in batch_data.batch:
+            data_dict = sensor_data.dict()
+            data_dict["server_received_at"] = int(time.time() * 1000)
+            SENSOR_DATA_HISTORY.append(data_dict)
+        
+        # Keep only last 1000 entries
+        if len(SENSOR_DATA_HISTORY) > 1000:
+            SENSOR_DATA_HISTORY[:] = SENSOR_DATA_HISTORY[-1000:]
+        
+        print(f"[SENSOR] Received batch of {received_count} sensor data entries")
+        
+        return {
+            "success": True,
+            "message": f"{received_count} sensor data entries received",
+            "timestamp": int(time.time() * 1000),
+            "entries_stored": len(SENSOR_DATA_HISTORY)
+        }
+    
+    except Exception as e:
+        print(f"[ERROR] Failed to process batch sensor data: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/sensor-data/latest")
+def get_latest_sensor_data(count: int = 10):
+    """Get the latest sensor data entries"""
+    if count > 100:
+        count = 100  # Limit to 100 entries max
+    
+    latest = SENSOR_DATA_HISTORY[-count:] if SENSOR_DATA_HISTORY else []
+    return {
+        "data": latest,
+        "count": len(latest),
+        "total_stored": len(SENSOR_DATA_HISTORY)
+    }
+
+@app.get("/api/sensor-data/all")
+def get_all_sensor_data():
+    """Get all stored sensor data"""
+    return {
+        "data": SENSOR_DATA_HISTORY,
+        "count": len(SENSOR_DATA_HISTORY)
+    }
+
+@app.delete("/api/sensor-data")
+def clear_sensor_data():
+    """Clear all sensor data history"""
+    SENSOR_DATA_HISTORY.clear()
+    return {
+        "success": True,
+        "message": "Sensor data history cleared"
+    }
+
+@app.get("/api/sensor-data/stats")
+def get_sensor_stats():
+    """Get statistics about received sensor data"""
+    if not SENSOR_DATA_HISTORY:
+        return {
+            "total_entries": 0,
+            "message": "No sensor data received yet"
+        }
+    
+    # Calculate statistics
+    has_accelerometer = sum(1 for d in SENSOR_DATA_HISTORY if d.get("accelerometer"))
+    has_gyroscope = sum(1 for d in SENSOR_DATA_HISTORY if d.get("gyroscope"))
+    has_magnetometer = sum(1 for d in SENSOR_DATA_HISTORY if d.get("magnetometer"))
+    has_gps = sum(1 for d in SENSOR_DATA_HISTORY if d.get("gps"))
+    has_light = sum(1 for d in SENSOR_DATA_HISTORY if d.get("ambientLight") is not None)
+    
+    latest = SENSOR_DATA_HISTORY[-1] if SENSOR_DATA_HISTORY else None
+    
+    return {
+        "total_entries": len(SENSOR_DATA_HISTORY),
+        "sensor_coverage": {
+            "accelerometer": has_accelerometer,
+            "gyroscope": has_gyroscope,
+            "magnetometer": has_magnetometer,
+            "gps": has_gps,
+            "light": has_light
+        },
+        "latest_timestamp": latest.get("timestamp") if latest else None,
+        "server_uptime": int(time.time())
+    }
+
+# ============================================================================
 # TWILIO EMERGENCY CALLING SYSTEM
 # ============================================================================
 

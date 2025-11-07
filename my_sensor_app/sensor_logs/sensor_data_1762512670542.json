@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-11-07T14:30:45.123Z",
+  "accelerometer": {
+    "x": 0.123,
+    "y": -0.456,
+    "z": 9.812
+  },
+  "gyroscope": {
+    "x": 0.001,
+    "y": 0.002,
+    "z": 0.003
+  },
+  "magnetometer": {
+    "x": 25.5,
+    "y": -15.3,
+    "z": 42.8
+  },
+  "gps": {
+    "latitude": 12.9716,
+    "longitude": 77.5946,
+    "altitude": 920,
+    "speed": 0,
+    "accuracy": 5
+  },
+  "proximity": null,
+  "ambientLight": 125.5,
+  "pressure": null
+}
