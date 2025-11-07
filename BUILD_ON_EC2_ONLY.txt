@@ -1,0 +1,100 @@
+⚠️  IMPORTANT: BUILD ON EC2, NOT LOCALLY ⚠️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+You encountered this error:
+  "Error response from daemon: the Dockerfile (Dockerfile) cannot be empty"
+
+This is because you tried to build on your LOCAL MACHINE.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                           WHY THIS HAPPENS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The master branch is specifically optimized for EC2 deployment:
+  ✓ Multistage builds for minimal size
+  ✓ Configured for EC2 IP (54.206.93.52)
+  ✓ Resource limits for t3.medium instance
+  ✓ Optimized for 35GB storage
+
+Building locally may:
+  ❌ Use different Docker versions
+  ❌ Have different file contexts
+  ❌ Consume your local resources unnecessarily
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                        WHAT YOU SHOULD DO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ CORRECT APPROACH - Build on EC2:
+
+1. SSH to your EC2 instance:
+   ssh -i "your-key.pem" ubuntu@54.206.93.52
+
+2. Clone the repository:
+   git clone https://github.com/Amruthms/code_martians.git
+   cd code_martians
+
+3. Checkout master branch:
+   git checkout master
+
+4. Run the automated setup:
+   chmod +x ec2-setup.sh
+   ./ec2-setup.sh
+
+The script will:
+  ✓ Install Docker and Docker Compose
+  ✓ Build all images (takes 10-15 minutes)
+  ✓ Start all services
+  ✓ Verify deployment
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                 IF YOU REALLY NEED TO BUILD LOCALLY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For local development, checkout the 'main' branch instead:
+
+git checkout main
+
+The main branch has different Docker configurations for local development.
+
+The MASTER branch is ONLY for EC2 production deployment.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                         TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+If you're on EC2 and still getting errors:
+
+1. Verify you're on master branch:
+   git branch
+   # Should show: * master
+
+2. Pull latest changes:
+   git pull origin master
+
+3. Check Dockerfile exists and is not empty:
+   cat yolov8_model/Dockerfile
+   # Should show the Alpine-based Dockerfile
+
+4. If Dockerfile is empty, re-clone:
+   cd ..
+   rm -rf code_martians
+   git clone https://github.com/Amruthms/code_martians.git
+   cd code_martians
+   git checkout master
+
+5. Then run setup:
+   ./ec2-setup.sh
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                           SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ DO: Build on EC2 instance (master branch)
+❌ DON'T: Build locally on master branch
+
+Master branch = EC2 Production Only
+Main branch = Local Development
+
+Follow DEPLOYMENT_STEPS.txt for proper EC2 deployment.
+
