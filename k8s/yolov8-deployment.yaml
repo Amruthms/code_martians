@@ -19,8 +19,8 @@ spec:
     spec:
       containers:
       - name: yolov8-model
-        image: yolov8-model:latest
-        imagePullPolicy: IfNotPresent
+        image: shrinidhiupadhyaya/code_martians_yolov8-model:latest
+        imagePullPolicy: Always
         resources:
           requests:
             memory: "64Mi"

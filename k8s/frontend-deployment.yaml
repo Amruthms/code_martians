@@ -24,8 +24,8 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: frontend:latest
-        imagePullPolicy: IfNotPresent
+        image: shrinidhiupadhyaya/code_martians_frontend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
           name: http
