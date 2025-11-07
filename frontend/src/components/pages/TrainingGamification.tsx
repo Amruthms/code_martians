@@ -16,7 +16,8 @@ import {
   Star,
   Zap,
   Shield,
-  Users
+  Users,
+  TrendingUp
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Avatar, AvatarFallback } from '../ui/avatar';
