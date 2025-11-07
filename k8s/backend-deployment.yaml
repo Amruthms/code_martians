@@ -1,0 +1,132 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: safety-monitoring
+  labels:
+    app: backend
+    tier: api
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        tier: api
+    spec:
+      initContainers:
+      - name: wait-for-model
+        image: busybox:1.36
+        command: ['sh', '-c', 'until ls /model/best.pt 2>/dev/null; do echo "Waiting for model..."; sleep 5; done; echo "Model ready!"']
+        volumeMounts:
+        - name: model-storage
+          mountPath: /model
+          readOnly: true
+      containers:
+      - name: backend
+        image: backend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: MODEL_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: MODEL_PATH
+        - name: PROCESS_EVERY_N_FRAMES
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: PROCESS_EVERY_N_FRAMES
+        - name: INFERENCE_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: INFERENCE_SIZE
+        - name: JPEG_QUALITY
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: JPEG_QUALITY
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        volumeMounts:
+        - name: model-storage
+          mountPath: /model
+          readOnly: true
+        - name: logs-storage
+          mountPath: /app/logs
+        - name: frames-storage
+          mountPath: /app/frames
+        livenessProbe:
+          httpGet:
+            path: /stats
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /stats
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /stats
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 12
+      volumes:
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: yolo-model-pvc
+      - name: logs-storage
+        persistentVolumeClaim:
+          claimName: backend-logs-pvc
+      - name: frames-storage
+        persistentVolumeClaim:
+          claimName: backend-frames-pvc
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: safety-monitoring
+  labels:
+    app: backend
+spec:
+  selector:
+    app: backend
+  ports:
+  - protocol: TCP
+    port: 8000
+    targetPort: 8000
+    name: http
+  type: ClusterIP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
