@@ -393,102 +393,106 @@ export function SiteMap() {
         )}
 
         {/* Main Content - Map and Controls */}
-        <div className="grid gap-6 xl:grid-cols-[320px_1fr]">
-          {/* Controls Panel - Fixed width */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Controls Panel - 50% width */}
           <Card className="border-gray-800/50 bg-gray-900/50 backdrop-blur-sm shadow-xl h-fit">
             <CardHeader className="pb-4">
-              <CardTitle className="text-white flex items-center gap-2.5 text-base">
+              <CardTitle className="text-white flex items-center gap-2.5 text-lg">
                 <MapPin className="h-5 w-5 text-[#FF7A00]" />
                 Map Controls
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6 p-6">
               {/* Layer toggles */}
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-800/40 hover:bg-gray-800/60 transition-all border border-gray-700/50">
-                  <Label htmlFor="heat-map" className="text-gray-200 cursor-pointer font-medium flex items-center gap-2 text-sm">
-                    <Zap className="h-3.5 w-3.5 text-orange-500" />
-                    Heat Map
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-gray-800/30 hover:bg-gray-800/50 transition-all border border-gray-700/30">
+                  <Label htmlFor="heat-map" className="text-gray-100 cursor-pointer font-medium flex items-center gap-3 text-base">
+                    <Zap className="h-4 w-4 text-orange-500" />
+                    Heat Map Zones
                   </Label>
                   <Switch 
                     id="heat-map" 
                     checked={showHeatMap} 
                     onCheckedChange={setShowHeatMap}
+                    className="ml-4"
                   />
                 </div>
                 
-                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-800/40 hover:bg-gray-800/60 transition-all border border-gray-700/50">
-                  <Label htmlFor="machines" className="text-gray-200 cursor-pointer font-medium flex items-center gap-2 text-sm">
-                    <Construction className="h-3.5 w-3.5 text-blue-500" />
+                <div className="flex items-center justify-between p-4 rounded-lg bg-gray-800/30 hover:bg-gray-800/50 transition-all border border-gray-700/30">
+                  <Label htmlFor="machines" className="text-gray-100 cursor-pointer font-medium flex items-center gap-3 text-base">
+                    <Construction className="h-4 w-4 text-blue-500" />
                     Machines
                   </Label>
                   <Switch 
                     id="machines" 
                     checked={showMachines} 
                     onCheckedChange={setShowMachines}
+                    className="ml-4"
                   />
                 </div>
                 
-                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-800/40 hover:bg-gray-800/60 transition-all border border-gray-700/50">
-                  <Label htmlFor="workers" className="text-gray-200 cursor-pointer font-medium flex items-center gap-2 text-sm">
-                    <Users className="h-3.5 w-3.5 text-green-500" />
+                <div className="flex items-center justify-between p-4 rounded-lg bg-gray-800/30 hover:bg-gray-800/50 transition-all border border-gray-700/30">
+                  <Label htmlFor="workers" className="text-gray-100 cursor-pointer font-medium flex items-center gap-3 text-base">
+                    <Users className="h-4 w-4 text-green-500" />
                     Workers
                   </Label>
                   <Switch 
                     id="workers" 
                     checked={showWorkers} 
                     onCheckedChange={setShowWorkers}
+                    className="ml-4"
                   />
                 </div>
                 
-                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-800/40 hover:bg-gray-800/60 transition-all border border-gray-700/50">
-                  <Label htmlFor="zones" className="text-gray-200 cursor-pointer font-medium flex items-center gap-2 text-sm">
-                    <Shield className="h-3.5 w-3.5 text-purple-500" />
-                    Boundaries
+                <div className="flex items-center justify-between p-4 rounded-lg bg-gray-800/30 hover:bg-gray-800/50 transition-all border border-gray-700/30">
+                  <Label htmlFor="zones" className="text-gray-100 cursor-pointer font-medium flex items-center gap-3 text-base">
+                    <Shield className="h-4 w-4 text-purple-500" />
+                    Zone Boundaries
                   </Label>
                   <Switch 
                     id="zones" 
                     checked={showZones} 
                     onCheckedChange={setShowZones}
+                    className="ml-4"
                   />
                 </div>
               </div>
 
               {/* Legend */}
-              <div className="space-y-2.5 border-t border-gray-700/50 pt-4">
-                <h3 className="text-white font-semibold text-xs mb-2 uppercase tracking-wide">Legend</h3>
+              <div className="space-y-3 border-t border-gray-700/50 pt-5">
+                <h3 className="text-white font-semibold text-sm mb-3 uppercase tracking-wide">Legend</h3>
                 
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full bg-red-500 shadow-sm flex-shrink-0"></div>
-                    <span className="text-xs text-gray-300">Danger Zone</span>
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-3">
+                    <div className="h-3.5 w-3.5 rounded-full bg-red-500 shadow-sm flex-shrink-0"></div>
+                    <span className="text-sm text-gray-300">Danger Zone</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full bg-[#FF7A00] shadow-sm flex-shrink-0"></div>
-                    <span className="text-xs text-gray-300">Restricted Zone</span>
+                  <div className="flex items-center gap-3">
+                    <div className="h-3.5 w-3.5 rounded-full bg-[#FF7A00] shadow-sm flex-shrink-0"></div>
+                    <span className="text-sm text-gray-300">Restricted Zone</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full bg-yellow-400 shadow-sm flex-shrink-0"></div>
-                    <span className="text-xs text-gray-300">Caution Zone</span>
+                  <div className="flex items-center gap-3">
+                    <div className="h-3.5 w-3.5 rounded-full bg-yellow-400 shadow-sm flex-shrink-0"></div>
+                    <span className="text-sm text-gray-300">Caution Zone</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full bg-green-500 shadow-sm flex-shrink-0"></div>
-                    <span className="text-xs text-gray-300">Safe Zone</span>
+                  <div className="flex items-center gap-3">
+                    <div className="h-3.5 w-3.5 rounded-full bg-green-500 shadow-sm flex-shrink-0"></div>
+                    <span className="text-sm text-gray-300">Safe Zone</span>
                   </div>
                 </div>
 
-                <div className="space-y-2 border-t border-gray-700/50 pt-3 mt-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm flex-shrink-0">🏗️</span>
-                    <span className="text-xs text-gray-300">Tower Crane</span>
+                <div className="space-y-2.5 border-t border-gray-700/50 pt-4 mt-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-base flex-shrink-0">🏗️</span>
+                    <span className="text-sm text-gray-300">Tower Crane</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm flex-shrink-0">🚜</span>
-                    <span className="text-xs text-gray-300">Excavator</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-base flex-shrink-0">🚜</span>
+                    <span className="text-sm text-gray-300">Excavator</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm flex-shrink-0">🚧</span>
-                    <span className="text-xs text-gray-300">Loader</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-base flex-shrink-0">🚧</span>
+                    <span className="text-sm text-gray-300">Loader</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm flex-shrink-0">🚚</span>
