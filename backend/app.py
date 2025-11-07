@@ -226,9 +226,15 @@ def generate_frames(source=None):
     cam = get_camera(source)
     frame_count = 0
     
+    # Performance optimization settings
+    PROCESS_EVERY_N_FRAMES = 3  # Process 1 out of every 3 frames (reduces CPU by 66%)
+    INFERENCE_SIZE = 640  # Smaller size for faster inference
+    JPEG_QUALITY = 75  # Lower quality for faster encoding/transmission
+    
     # Pre-load model in background to avoid blocking first frames
     model = None
     model_loading = True
+    last_annotated_frame = None  # Cache last processed frame
     
     def load_model_async():
         nonlocal model, model_loading
@@ -261,12 +267,20 @@ def generate_frames(source=None):
                 cv2.rectangle(annotated_frame, (5, 5), (350, 45), (0, 0, 0), -1)
                 cv2.putText(annotated_frame, "Loading AI Model...", (15, 35), 
                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 165, 255), 2)
-            else:
-                # Run YOLOv8 prediction
-                results = model.predict(frame, conf=0.5, verbose=False)[0]
+            # OPTIMIZATION: Process only every Nth frame
+            elif frame_count % PROCESS_EVERY_N_FRAMES == 0:
+                # Resize frame for faster inference
+                inference_frame = cv2.resize(frame, (INFERENCE_SIZE, INFERENCE_SIZE))
                 
-                # Get annotated frame with bounding boxes
-                annotated_frame = results.plot()
+                # Run YOLOv8 prediction on smaller frame
+                results = model.predict(inference_frame, conf=0.5, verbose=False)[0]
+                
+                # Get annotated frame with bounding boxes (resize back to display size)
+                annotated_small = results.plot()
+                annotated_frame = cv2.resize(annotated_small, (frame.shape[1], frame.shape[0]))
+                
+                # Cache this frame for skipped frames
+                last_annotated_frame = annotated_frame.copy()
                 
                 # Count violations for alerts
                 violation_count = 0
@@ -319,6 +333,12 @@ def generate_frames(source=None):
                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
                 cv2.putText(annotated_frame, f"Violations: {violation_count}", (10, 95), 
                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255) if violation_count > 0 else (0, 255, 0), 2)
+            else:
+                # OPTIMIZATION: Use cached frame for skipped frames
+                if last_annotated_frame is not None:
+                    annotated_frame = last_annotated_frame
+                else:
+                    annotated_frame = frame
             
         except Exception as e:
             print(f"[ERROR] Frame processing error: {e}")
@@ -327,9 +347,9 @@ def generate_frames(source=None):
             annotated_frame = frame
             continue
         
-        # Encode frame as JPEG
+        # Encode frame as JPEG with lower quality for faster transmission
         try:
-            ret, buffer = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            ret, buffer = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
             if not ret:
                 print("Failed to encode frame")
                 continue
