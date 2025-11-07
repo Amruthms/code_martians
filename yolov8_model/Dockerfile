@@ -33,24 +33,15 @@ WORKDIR /app
 # Copy verified model from prep stage
 COPY --from=model-prep /build/best.pt /app/best.pt
 
-# Copy the model copying script
+# Copy the model copying script (from yolov8_model directory since context is root)
 COPY yolov8_model/copy_model.sh /app/copy_model.sh
 
 # Make the script executable and verify
 RUN chmod +x /app/copy_model.sh && \
     ls -lh /app/
 
-# Create non-root user for security
-RUN addgroup -g 1000 modeluser && \
-    adduser -D -u 1000 -G modeluser modeluser && \
-    chown -R modeluser:modeluser /app
-
-# Create the models directory with proper permissions
-RUN mkdir -p /models && \
-    chown -R modeluser:modeluser /models
-
-# Switch to non-root user
-USER modeluser
+# Create the models directory
+RUN mkdir -p /models
 
 # Volume mount point for sharing models
 VOLUME ["/models"]
@@ -63,4 +54,5 @@ LABEL maintainer="code_martians" \
       model.task="object-detection"
 
 # This container will copy the model to the shared volume and keep running
+# Running as root to avoid permission issues with Docker volumes
 CMD ["/app/copy_model.sh"]
