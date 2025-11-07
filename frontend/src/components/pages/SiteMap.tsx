@@ -350,8 +350,8 @@ export function SiteMap() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="mx-auto max-w-[1600px] space-y-6">
+    <div className="space-y-6 p-6">
+      <div className="mx-auto max-w-[1800px] space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="space-y-2">
@@ -369,7 +369,7 @@ export function SiteMap() {
 
         {/* Live Alerts */}
         {liveAlerts.length > 0 && (
-          <Alert className="border-red-500/40 bg-red-950/30">
+          <Alert className="border-red-500/40 bg-red-950/30 rounded-xl">
             <AlertTriangle className="h-5 w-5 text-red-500" />
             <AlertDescription className="text-white flex items-center justify-between gap-4">
               <div className="flex-1">
@@ -392,22 +392,23 @@ export function SiteMap() {
           </Alert>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-4">
-          {/* Controls Panel */}
-          <Card className="border-gray-800 bg-gray-900 lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+        {/* Main Content - Map and Controls */}
+        <div className="grid gap-6 xl:grid-cols-[320px_1fr]">
+          {/* Controls Panel - Fixed width */}
+          <Card className="border-gray-800/50 bg-gray-900/50 backdrop-blur-sm shadow-xl h-fit">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-white flex items-center gap-2.5 text-base">
                 <MapPin className="h-5 w-5 text-[#FF7A00]" />
                 Map Controls
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4">
               {/* Layer toggles */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800 transition-colors">
-                  <Label htmlFor="heat-map" className="text-gray-300 cursor-pointer font-medium flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-orange-500" />
-                    Heat Map Zones
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-800/40 hover:bg-gray-800/60 transition-all border border-gray-700/50">
+                  <Label htmlFor="heat-map" className="text-gray-200 cursor-pointer font-medium flex items-center gap-2 text-sm">
+                    <Zap className="h-3.5 w-3.5 text-orange-500" />
+                    Heat Map
                   </Label>
                   <Switch 
                     id="heat-map" 
@@ -416,9 +417,9 @@ export function SiteMap() {
                   />
                 </div>
                 
-                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800 transition-colors">
-                  <Label htmlFor="machines" className="text-gray-300 cursor-pointer font-medium flex items-center gap-2">
-                    <Construction className="h-4 w-4 text-blue-500" />
+                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-800/40 hover:bg-gray-800/60 transition-all border border-gray-700/50">
+                  <Label htmlFor="machines" className="text-gray-200 cursor-pointer font-medium flex items-center gap-2 text-sm">
+                    <Construction className="h-3.5 w-3.5 text-blue-500" />
                     Machines
                   </Label>
                   <Switch 
@@ -428,9 +429,9 @@ export function SiteMap() {
                   />
                 </div>
                 
-                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800 transition-colors">
-                  <Label htmlFor="workers" className="text-gray-300 cursor-pointer font-medium flex items-center gap-2">
-                    <Users className="h-4 w-4 text-green-500" />
+                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-800/40 hover:bg-gray-800/60 transition-all border border-gray-700/50">
+                  <Label htmlFor="workers" className="text-gray-200 cursor-pointer font-medium flex items-center gap-2 text-sm">
+                    <Users className="h-3.5 w-3.5 text-green-500" />
                     Workers
                   </Label>
                   <Switch 
@@ -440,10 +441,10 @@ export function SiteMap() {
                   />
                 </div>
                 
-                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800 transition-colors">
-                  <Label htmlFor="zones" className="text-gray-300 cursor-pointer font-medium flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-purple-500" />
-                    Zone Boundaries
+                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-800/40 hover:bg-gray-800/60 transition-all border border-gray-700/50">
+                  <Label htmlFor="zones" className="text-gray-200 cursor-pointer font-medium flex items-center gap-2 text-sm">
+                    <Shield className="h-3.5 w-3.5 text-purple-500" />
+                    Boundaries
                   </Label>
                   <Switch 
                     id="zones" 
@@ -454,58 +455,58 @@ export function SiteMap() {
               </div>
 
               {/* Legend */}
-              <div className="space-y-3 border-t border-gray-800 pt-5">
-                <h3 className="text-white font-semibold">Legend</h3>
+              <div className="space-y-2.5 border-t border-gray-700/50 pt-4">
+                <h3 className="text-white font-semibold text-xs mb-2 uppercase tracking-wide">Legend</h3>
                 
-                <div className="space-y-2.5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-4 w-4 rounded-full bg-red-500"></div>
-                    <span className="text-sm text-gray-300">Danger Zone</span>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-full bg-red-500 shadow-sm flex-shrink-0"></div>
+                    <span className="text-xs text-gray-300">Danger Zone</span>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-4 w-4 rounded-full bg-[#FF7A00]"></div>
-                    <span className="text-sm text-gray-300">Restricted Zone</span>
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-full bg-[#FF7A00] shadow-sm flex-shrink-0"></div>
+                    <span className="text-xs text-gray-300">Restricted Zone</span>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-4 w-4 rounded-full bg-yellow-400"></div>
-                    <span className="text-sm text-gray-300">Caution Zone</span>
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-full bg-yellow-400 shadow-sm flex-shrink-0"></div>
+                    <span className="text-xs text-gray-300">Caution Zone</span>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-4 w-4 rounded-full bg-green-500"></div>
-                    <span className="text-sm text-gray-300">Safe Zone</span>
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-full bg-green-500 shadow-sm flex-shrink-0"></div>
+                    <span className="text-xs text-gray-300">Safe Zone</span>
                   </div>
                 </div>
 
-                <div className="space-y-2.5 border-t border-gray-800 pt-4">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-lg">🏗️</span>
-                    <span className="text-sm text-gray-300">Tower Crane</span>
+                <div className="space-y-2 border-t border-gray-700/50 pt-3 mt-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm flex-shrink-0">🏗️</span>
+                    <span className="text-xs text-gray-300">Tower Crane</span>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-lg">🚜</span>
-                    <span className="text-sm text-gray-300">Excavator</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm flex-shrink-0">🚜</span>
+                    <span className="text-xs text-gray-300">Excavator</span>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-lg">🚧</span>
-                    <span className="text-sm text-gray-300">Loader</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm flex-shrink-0">🚧</span>
+                    <span className="text-xs text-gray-300">Loader</span>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-lg">🚚</span>
-                    <span className="text-sm text-gray-300">Truck</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm flex-shrink-0">🚚</span>
+                    <span className="text-xs text-gray-300">Truck</span>
                   </div>
                 </div>
               </div>
 
               {/* Selected Item Info */}
               {selectedItem && (
-                <div className="space-y-3 border-t border-gray-800 pt-5">
-                  <h3 className="text-white font-semibold">Selection</h3>
-                  <p className="text-sm text-gray-300 p-3 bg-gray-800/50 rounded-lg">{selectedItem}</p>
+                <div className="space-y-2 border-t border-gray-700/50 pt-4">
+                  <h3 className="text-white font-semibold text-xs uppercase tracking-wide">Selection</h3>
+                  <p className="text-xs text-gray-300 p-2.5 bg-gray-800/40 rounded-lg border border-gray-700/50">{selectedItem}</p>
                   <Button 
                     variant="outline" 
                     size="sm" 
                     onClick={() => setSelectedItem(null)}
-                    className="w-full bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+                    className="w-full bg-gray-800/40 border-gray-700 text-white hover:bg-gray-700 text-xs"
                   >
                     Clear Selection
                   </Button>
@@ -514,97 +515,99 @@ export function SiteMap() {
             </CardContent>
           </Card>
 
-          {/* Map Canvas */}
-          <Card className="border-gray-800 bg-gray-900 lg:col-span-3">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-[#FF7A00]" />
-                  Interactive Site Map
+          {/* Map Canvas - Takes remaining space */}
+          <div className="space-y-4">
+            <Card className="border-gray-800/50 bg-gray-900/50 backdrop-blur-sm shadow-xl">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-white flex items-center justify-between text-lg">
+                  <div className="flex items-center gap-2.5">
+                    <Shield className="h-5 w-5 text-[#FF7A00]" />
+                    Interactive Site Map
+                  </div>
+                  <Badge className="bg-green-500/10 text-green-400 border-green-500/20 px-3 py-1">
+                    <Radio className="mr-1.5 h-3 w-3" />
+                    Live Tracking
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-xl bg-black/80 p-3 border border-gray-800/60 shadow-inner">
+                  <canvas
+                    ref={canvasRef}
+                    width={800}
+                    height={550}
+                    className="w-full cursor-crosshair rounded-lg"
+                    onClick={handleCanvasClick}
+                  />
                 </div>
-                <Badge className="bg-green-500/10 text-green-400 border-green-500/20">
-                  <Radio className="mr-1.5 h-3 w-3" />
-                  Live Tracking
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="rounded-xl bg-black p-4 border border-gray-800">
-                <canvas
-                  ref={canvasRef}
-                  width={800}
-                  height={550}
-                  className="w-full cursor-crosshair rounded-lg border border-gray-800"
-                  onClick={handleCanvasClick}
-                />
-              </div>
 
-              {/* Status Bar */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="rounded-xl bg-black p-4 border border-gray-800 hover:border-gray-700 transition-colors">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
-                      <Users className="h-4 w-4" />
-                      <span>Workers</span>
-                    </div>
-                    <div className="text-white text-3xl font-bold">{workerPositions.length}</div>
-                  </div>
-                </div>
-                
-                <div className="rounded-xl bg-black p-4 border border-gray-800 hover:border-gray-700 transition-colors">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
-                      <Construction className="h-4 w-4" />
-                      <span>Machines</span>
-                    </div>
-                    <div className="text-white text-3xl font-bold">
-                      {machines.filter(m => m.status === 'active').length}/{machines.length}
+                {/* Status Bar */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="rounded-xl bg-black p-4 border border-gray-800 hover:border-gray-700 transition-colors">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
+                        <Users className="h-4 w-4" />
+                        <span>Workers</span>
+                      </div>
+                      <div className="text-white text-3xl font-bold">{workerPositions.length}</div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="rounded-xl bg-black p-4 border border-gray-800 hover:border-gray-700 transition-colors">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
-                      <AlertTriangle className="h-4 w-4" />
-                      <span>Danger Zones</span>
-                    </div>
-                    <div className="text-white text-3xl font-bold">{heatZones.filter(z => z.type === 'danger').length}</div>
-                  </div>
-                </div>
-                
-                <div className="rounded-xl bg-black p-4 border border-red-500/20 hover:border-red-500/40 transition-colors">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
-                      <Zap className="h-4 w-4" />
-                      <span>At Risk</span>
-                    </div>
-                    <div className="text-red-500 text-3xl font-bold">
-                      {workerPositions.filter(w => w.status === 'danger').length}
+                  
+                  <div className="rounded-xl bg-black p-4 border border-gray-800 hover:border-gray-700 transition-colors">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
+                        <Construction className="h-4 w-4" />
+                        <span>Machines</span>
+                      </div>
+                      <div className="text-white text-3xl font-bold">
+                        {machines.filter(m => m.status === 'active').length}/{machines.length}
+                      </div>
                     </div>
                   </div>
+                  
+                  <div className="rounded-xl bg-black p-4 border border-gray-800 hover:border-gray-700 transition-colors">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
+                        <AlertTriangle className="h-4 w-4" />
+                        <span>Danger Zones</span>
+                      </div>
+                      <div className="text-white text-3xl font-bold">{heatZones.filter(z => z.type === 'danger').length}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-xl bg-black p-4 border border-red-500/20 hover:border-red-500/40 transition-colors">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
+                        <Zap className="h-4 w-4" />
+                        <span>At Risk</span>
+                      </div>
+                      <div className="text-red-500 text-3xl font-bold">
+                        {workerPositions.filter(w => w.status === 'danger').length}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Machine & Worker Details */}
         <div className="grid gap-6 md:grid-cols-2">
           {/* Machine Status */}
-          <Card className="border-gray-800 bg-gray-900">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+          <Card className="border-gray-800/50 bg-gray-900/50 backdrop-blur-sm shadow-xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-white flex items-center gap-2.5 text-lg">
                 <Construction className="h-5 w-5 text-[#FF7A00]" />
                 Machine Status Overview
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4">
+              <div className="grid gap-3">
                 {machines.map(machine => (
                   <div 
                     key={machine.id}
-                    className="rounded-xl bg-black p-4 border border-gray-800 hover:border-gray-700 transition-all"
+                    className="rounded-xl bg-black/60 p-4 border border-gray-800/60 hover:border-gray-700/80 hover:shadow-lg transition-all"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="text-2xl">
@@ -615,19 +618,19 @@ export function SiteMap() {
                         {machine.type === 'mixer' && '🔧'}
                       </div>
                       <Badge 
-                        className={
+                        className={`px-2.5 py-0.5 text-xs font-medium ${
                           machine.status === 'active' 
-                            ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                            ? 'bg-green-500/10 text-green-400 border-green-500/30' :
                           machine.status === 'idle' 
-                            ? 'bg-gray-500/10 text-gray-400 border-gray-500/20' :
-                            'bg-red-500/10 text-red-400 border-red-500/20'
-                        }
+                            ? 'bg-gray-500/10 text-gray-400 border-gray-500/30' :
+                            'bg-red-500/10 text-red-400 border-red-500/30'
+                        }`}
                       >
                         {machine.status}
                       </Badge>
                     </div>
-                    <h3 className="text-white font-semibold mb-1">{machine.name}</h3>
-                    <p className="text-sm text-gray-400 capitalize mb-3">{machine.type}</p>
+                    <h3 className="text-white font-semibold mb-1 text-base">{machine.name}</h3>
+                    <p className="text-sm text-gray-400 capitalize mb-3 font-medium">{machine.type}</p>
                     <div className="flex items-center gap-2">
                       <AlertTriangle 
                         className={`h-4 w-4 ${
@@ -636,7 +639,7 @@ export function SiteMap() {
                           'text-green-500'
                         }`}
                       />
-                      <span className="text-sm text-gray-400 capitalize">
+                      <span className="text-sm text-gray-400 capitalize font-medium">
                         {machine.riskLevel} Risk
                       </span>
                     </div>
@@ -647,19 +650,19 @@ export function SiteMap() {
           </Card>
 
           {/* Worker Tracking */}
-          <Card className="border-gray-800 bg-gray-900">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+          <Card className="border-gray-800/50 bg-gray-900/50 backdrop-blur-sm shadow-xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-white flex items-center gap-2.5 text-lg">
                 <Users className="h-5 w-5 text-[#FF7A00]" />
                 Live Worker Tracking
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4">
+              <div className="grid gap-3">
                 {workerPositions.map(worker => (
                   <div 
                     key={worker.id}
-                    className="rounded-xl bg-black p-4 border border-gray-800 hover:border-gray-700 transition-all"
+                    className="rounded-xl bg-black/60 p-4 border border-gray-800/60 hover:border-gray-700/80 hover:shadow-lg transition-all"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2.5">
@@ -670,15 +673,15 @@ export function SiteMap() {
                             'bg-green-500'
                           }`}
                         />
-                        <span className="text-white font-semibold">{worker.name}</span>
+                        <span className="text-white font-semibold text-base">{worker.name}</span>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-400 mb-2">{worker.zone}</p>
-                    <div className="text-xs text-gray-500 mb-3">
+                    <p className="text-sm text-gray-400 mb-2 font-medium">{worker.zone}</p>
+                    <div className="text-xs text-gray-500 font-medium mb-3">
                       Position: ({Math.round(worker.position.x)}, {Math.round(worker.position.y)})
                     </div>
                     {worker.status === 'danger' && (
-                      <div className="flex items-center gap-1.5 text-xs text-red-500 font-semibold bg-red-500/10 px-2 py-1.5 rounded-lg border border-red-500/20">
+                      <div className="flex items-center gap-1.5 text-xs text-red-500 font-semibold bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/20">
                         <Zap className="h-3 w-3" />
                         In Danger Zone!
                       </div>
