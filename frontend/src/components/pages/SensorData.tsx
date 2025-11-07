@@ -55,7 +55,7 @@ interface SensorStats {
   server_uptime: number;
 }
 
-const API_URL = 'http://localhost:8000'; // Direct connection to backend
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'; // Backend API URL
 
 export default function SensorData() {
   const [latestData, setLatestData] = useState<SensorDataEntry[]>([]);

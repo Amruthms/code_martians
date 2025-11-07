@@ -89,7 +89,8 @@ export function EmergencyEvacuation() {
     try {
       console.log(`Initiating call to ${contactName} (${contactType})...`);
       
-      const response = await fetch(`http://localhost:8000/voice/call/${contactType}`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/voice/call/${contactType}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -113,8 +114,9 @@ export function EmergencyEvacuation() {
       
       // Check if it's a network error
       if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         toast.error('Backend Not Running ❌', {
-          description: 'Cannot connect to backend server. Please ensure the backend is running on http://localhost:8000',
+          description: `Cannot connect to backend server. Please ensure the backend is running on ${apiUrl}`,
           duration: 7000,
         });
       } else {
