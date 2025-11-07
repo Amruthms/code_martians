@@ -44,11 +44,11 @@ services:
       - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
       - TWILIO_CALLER_NUMBER=${TWILIO_CALLER_NUMBER}
       - BASE_URL=${BASE_URL:-http://54.206.93.52:8000}
-      # Emergency Contact Numbers
-      - EMERGENCY_FIRE_NUMBER=${EMERGENCY_FIRE_NUMBER}
-      - EMERGENCY_AMBULANCE_NUMBER=${EMERGENCY_AMBULANCE_NUMBER}
-      - EMERGENCY_POLICE_NUMBER=${EMERGENCY_POLICE_NUMBER}
-      - EMERGENCY_MANAGER_NUMBER=${EMERGENCY_MANAGER_NUMBER}
+      # Emergency Contact Numbers (match app.py variable names)
+      - EMERGENCY_FIRE=${EMERGENCY_FIRE}
+      - EMERGENCY_AMBULANCE=${EMERGENCY_AMBULANCE}
+      - EMERGENCY_POLICE=${EMERGENCY_POLICE}
+      - EMERGENCY_MANAGER=${EMERGENCY_MANAGER}
     volumes:
       # Mount the shared model volume
       - yolo_model:/app/models:ro
