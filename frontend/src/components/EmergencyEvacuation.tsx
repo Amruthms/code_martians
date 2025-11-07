@@ -15,16 +15,18 @@ import {
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Progress } from './ui/progress';
+import { toast } from 'sonner';
 
 export function EmergencyEvacuation() {
   const [emergencyActive, setEmergencyActive] = useState(false);
   const [evacuationDialogOpen, setEvacuationDialogOpen] = useState(false);
+  const [callingContact, setCallingContact] = useState<string | null>(null);
 
   const emergencyContacts = [
-    { name: 'Fire Department', number: '110', type: 'fire' },
-    { name: 'Ambulance', number: '113', type: 'medical' },
-    { name: 'Police', number: '112', type: 'police' },
-    { name: 'Site Manager', number: '+47 123 45 678', type: 'internal' },
+    { name: 'Fire Department', number: '110', type: 'fire', apiEndpoint: 'fire' },
+    { name: 'Ambulance', number: '113', type: 'ambulance', apiEndpoint: 'ambulance' },
+    { name: 'Police', number: '112', type: 'police', apiEndpoint: 'police' },
+    { name: 'Site Manager', number: '+47 123 45 678', type: 'manager', apiEndpoint: 'manager' },
   ];
 
   const evacuationZones = [
@@ -86,6 +88,38 @@ export function EmergencyEvacuation() {
     setEvacuationDialogOpen(false);
   };
 
+  const handleEmergencyCall = async (contactType: string, contactName: string) => {
+    setCallingContact(contactType);
+    
+    try {
+      const response = await fetch(`http://localhost:8000/voice/call/${contactType}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success('Emergency Call Initiated', {
+          description: `Calling ${contactName}. Call SID: ${data.sid}`,
+          duration: 5000,
+        });
+      } else {
+        throw new Error(data.detail || 'Failed to initiate call');
+      }
+    } catch (error) {
+      console.error('Emergency call error:', error);
+      toast.error('Call Failed', {
+        description: error instanceof Error ? error.message : 'Unable to place emergency call. Please try again.',
+        duration: 5000,
+      });
+    } finally {
+      setCallingContact(null);
+    }
+  };
+
   const totalWorkers = evacuationZones.reduce((sum, zone) => sum + zone.workers, 0);
   const evacuatedWorkers = evacuationZones
     .filter(z => z.status === 'evacuated')
@@ -128,9 +162,11 @@ export function EmergencyEvacuation() {
                       variant="outline" 
                       size="sm"
                       className="border-gray-700 text-gray-300 hover:bg-gray-800 justify-start"
+                      onClick={() => handleEmergencyCall(contact.apiEndpoint, contact.name)}
+                      disabled={callingContact === contact.apiEndpoint}
                     >
                       <Phone className="h-3 w-3 mr-1" />
-                      {contact.number}
+                      {callingContact === contact.apiEndpoint ? 'Calling...' : contact.number}
                     </Button>
                   ))}
                 </div>
@@ -178,15 +214,15 @@ export function EmergencyEvacuation() {
 
       {/* Evacuation Status Dialog */}
       <Dialog open={evacuationDialogOpen} onOpenChange={setEvacuationDialogOpen}>
-        <DialogContent className="bg-gray-900 border-red-600 text-white max-w-4xl">
+        <DialogContent className="bg-gray-900 border-red-600 text-white max-w-3xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle className="text-2xl flex items-center gap-3">
-              <div className="h-12 w-12 bg-red-600 rounded-full flex items-center justify-center animate-pulse">
-                <Siren className="h-6 w-6" />
+            <DialogTitle className="text-xl flex items-center gap-3">
+              <div className="h-10 w-10 bg-red-600 rounded-full flex items-center justify-center animate-pulse">
+                <Siren className="h-5 w-5" />
               </div>
               <div>
                 <div>Emergency Evacuation Active</div>
-                <div className="text-sm text-gray-400">Real-time evacuation monitoring</div>
+                <div className="text-xs text-gray-400">Real-time evacuation monitoring</div>
               </div>
             </DialogTitle>
             <DialogDescription className="sr-only">
@@ -194,96 +230,45 @@ export function EmergencyEvacuation() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6">
+          <div className="space-y-4 overflow-y-auto max-h-[calc(90vh-120px)] pr-2">
             {/* Overall Progress */}
             <div className="p-4 bg-red-950/50 border border-red-800 rounded-lg">
-              <div className="flex justify-between items-center mb-3">
-                <div>
-                  <div className="text-xl text-white">{evacuatedWorkers} of {totalWorkers} Workers Evacuated</div>
+              <div className="mb-3">
+                <div className="text-lg text-white mb-1">{evacuatedWorkers} of {totalWorkers} Workers Evacuated</div>
+                <div className="flex justify-between items-center mb-2">
                   <div className="text-sm text-gray-400">Evacuation Progress: {evacuationProgress}%</div>
+                  <div className="text-2xl font-bold text-red-400">{evacuationProgress}%</div>
                 </div>
-                <div className="text-4xl text-red-400">{evacuationProgress}%</div>
               </div>
               <Progress value={evacuationProgress} className="h-3 bg-gray-800" />
             </div>
 
             {/* Emergency Contacts */}
             <div>
-              <h3 className="text-white mb-3">Emergency Services Notified</h3>
+              <h3 className="text-white text-base mb-3">Emergency Services Notified</h3>
               <div className="grid grid-cols-2 gap-3">
                 {emergencyContacts.map((contact, index) => (
                   <div key={index} className="p-3 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-between">
-                    <div>
-                      <div className="text-sm text-white">{contact.name}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-white truncate">{contact.name}</div>
                       <div className="text-xs text-gray-400">{contact.number}</div>
                     </div>
-                    <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                    <Button 
+                      size="sm" 
+                      className="bg-green-600 hover:bg-green-700 ml-2 shrink-0"
+                      onClick={() => handleEmergencyCall(contact.apiEndpoint, contact.name)}
+                      disabled={callingContact === contact.apiEndpoint}
+                    >
                       <Phone className="h-3 w-3 mr-1" />
-                      Call
+                      {callingContact === contact.apiEndpoint ? 'Calling...' : 'Call'}
                     </Button>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Zone Status */}
-            <div>
-              <h3 className="text-white mb-3">Evacuation Status by Zone</h3>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {evacuationZones.map((zone, index) => (
-                  <div 
-                    key={index}
-                    className={`p-4 rounded-lg border ${
-                      zone.status === 'evacuated' 
-                        ? 'bg-green-950/30 border-green-700' 
-                        : zone.status === 'in-progress'
-                        ? 'bg-yellow-950/30 border-yellow-700'
-                        : 'bg-red-950/30 border-red-700'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <MapPin className="h-4 w-4 text-gray-400" />
-                          <span className="text-white">{zone.zone}</span>
-                          <Badge className={`
-                            ${zone.status === 'evacuated' ? 'bg-green-900 text-green-400' : ''}
-                            ${zone.status === 'in-progress' ? 'bg-yellow-900 text-yellow-400' : ''}
-                            ${zone.status === 'pending' ? 'bg-red-900 text-red-400' : ''}
-                            border-0
-                          `}>
-                            {zone.status === 'evacuated' && <CheckCircle className="h-3 w-3 mr-1" />}
-                            {zone.status === 'in-progress' && <Clock className="h-3 w-3 mr-1" />}
-                            {zone.status === 'pending' && <XCircle className="h-3 w-3 mr-1" />}
-                            {zone.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-400">
-                          <span className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {zone.workers} workers
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Navigation className="h-3 w-3" />
-                            {zone.exit}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            Est. {zone.time}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          Assembly: {zone.assemblyPoint}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Action Buttons */}
-            <div className="flex gap-3 pt-4 border-t border-gray-800">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-800">
               <Button 
                 className="flex-1 bg-blue-600 hover:bg-blue-700"
                 onClick={() => {
@@ -306,7 +291,7 @@ export function EmergencyEvacuation() {
               </Button>
               <Button 
                 variant="outline"
-                className="border-gray-700 text-gray-300"
+                className="border-gray-700 text-gray-300 sm:flex-none"
                 onClick={handleEmergencyDeactivation}
               >
                 Deactivate
