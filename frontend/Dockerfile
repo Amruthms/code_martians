@@ -104,6 +104,6 @@ EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost/ || exit 1
 
-# Run nginx in foreground as nginx user
-USER nginx
+# Run nginx in foreground
+# Note: nginx master runs as root, workers run as nginx user (defined in nginx.conf)
 CMD ["nginx", "-g", "daemon off;"]
