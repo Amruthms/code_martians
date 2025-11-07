@@ -100,6 +100,19 @@ def stats():
     score = max(0, 100 - 5*len(recent))
     return {"total": total, "by_type": by_type, "safety_score": score}
 
+@app.get("/camera/test")
+def test_camera():
+    """Quick test to check if camera is accessible"""
+    try:
+        cam = get_camera()
+        success, frame = cam.read()
+        if success:
+            return {"status": "ok", "message": "Camera is working", "frame_shape": frame.shape}
+        else:
+            return {"status": "error", "message": "Failed to read frame"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @app.post("/vision/start")
 def start_vision():
     global vision_process
@@ -385,8 +398,13 @@ def generate_frames(source=None):
             continue
 
 @app.get("/video_feed")
-def video_feed(source: str = None):
-    """Video streaming endpoint with optional source parameter"""
+def video_feed(source: str = None, raw: bool = False):
+    """Video streaming endpoint with optional source parameter
+    
+    Args:
+        source: Camera source (index or URL)
+        raw: If True, skip AI processing for maximum speed
+    """
     # Parse source parameter - can be camera index or URL
     camera_source = None
     if source:
@@ -397,8 +415,99 @@ def video_feed(source: str = None):
             # It's a URL (IP camera or RTSP)
             camera_source = source
     
+    # Use raw mode for instant streaming
+    if raw:
+        return StreamingResponse(
+            generate_raw_frames(camera_source),
+            media_type="multipart/x-mixed-replace; boundary=frame"
+        )
+    
     return StreamingResponse(
         generate_frames(camera_source),
+        media_type="multipart/x-mixed-replace; boundary=frame"
+    )
+
+def generate_raw_frames(source=None):
+    """Generate raw video frames without AI processing - MAXIMUM SPEED"""
+    cam = get_camera(source)
+    print("[INFO] Starting RAW frame generation (no AI processing)...")
+    
+    while True:
+        success, frame = cam.read()
+        if not success:
+            break
+        
+        try:
+            # Just encode and send - no processing!
+            ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
+            if ret:
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+        except:
+            continue
+
+# Global variable for streaming from remote source
+streaming_frames = []
+streaming_active = False
+
+@app.post("/upload_stream")
+async def upload_stream(request: Request):
+    """Receive MJPEG stream from ffmpeg and process with YOLOv8"""
+    global streaming_frames, streaming_active
+    
+    print("[INFO] Receiving stream from remote source...")
+    streaming_active = True
+    
+    try:
+        # Read the multipart stream
+        body = await request.body()
+        
+        # Parse MJPEG stream
+        parts = body.split(b'--')
+        for part in parts:
+            if b'Content-Type: image/jpeg' in part:
+                # Extract JPEG data
+                jpeg_start = part.find(b'\r\n\r\n') + 4
+                if jpeg_start > 3:
+                    jpeg_data = part[jpeg_start:]
+                    
+                    # Decode JPEG
+                    nparr = np.frombuffer(jpeg_data, np.uint8)
+                    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                    
+                    if frame is not None:
+                        # Process with YOLOv8
+                        model = get_yolo_model()
+                        results = model.predict(frame, conf=0.5, verbose=False)[0]
+                        annotated_frame = results.plot()
+                        
+                        # Store for streaming endpoint
+                        streaming_frames.append(annotated_frame)
+                        if len(streaming_frames) > 30:  # Keep only last 30 frames
+                            streaming_frames.pop(0)
+        
+        return {"status": "ok", "message": "Stream received"}
+    except Exception as e:
+        print(f"[ERROR] Stream upload error: {e}")
+        return {"status": "error", "message": str(e)}
+    finally:
+        streaming_active = False
+
+@app.get("/remote_stream")
+def remote_stream():
+    """Stream the processed frames from remote source"""
+    def generate():
+        while True:
+            if streaming_frames:
+                frame = streaming_frames[-1]  # Get latest frame
+                ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                if ret:
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+            time.sleep(0.033)  # ~30 FPS
+    
+    return StreamingResponse(
+        generate(),
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
 
