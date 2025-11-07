@@ -45,6 +45,11 @@ services:
       # Persistent volumes for frames and logs
       - ./backend/frames:/app/frames
       - ./backend/logs:/app/logs
+    devices:
+      # Grant access to camera device(s)
+      - /dev/video0:/dev/video0
+      - /dev/video1:/dev/video1
+    privileged: true  # Required for camera access
     networks:
       - safety-network
     restart: unless-stopped
