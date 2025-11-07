@@ -9,9 +9,17 @@ import {
   AlertTriangle,
   CheckCircle2,
   Info,
+  Camera,
 } from "lucide-react";
 import { detectHelmet } from "../services/helmetDetection";
 import { useApp } from "../context/AppContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 
 export function WebcamDetection() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -20,6 +28,8 @@ export function WebcamDetection() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isLoadingModel, setIsLoadingModel] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cameraSources, setCameraSources] = useState<any[]>([]);
+  const [selectedCamera, setSelectedCamera] = useState<string>("");
   const [detectionStatus, setDetectionStatus] = useState<{
     personDetected: boolean;
     helmetDetected: boolean;
@@ -34,10 +44,63 @@ export function WebcamDetection() {
   const { addAlert, updateCameraFeed } = useApp();
 
   useEffect(() => {
+    fetchCameraSources();
     return () => {
       stopWebcam();
     };
   }, []);
+
+  const fetchCameraSources = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const response = await fetch(`${apiUrl}/camera/sources`);
+      const data = await response.json();
+      setCameraSources(data.sources || []);
+
+      // Find and set the active camera
+      const active = data.sources?.find((s: any) => s.active);
+      if (active) {
+        setSelectedCamera(`${active.type}-${active.index || active.url}`);
+      }
+    } catch (error) {
+      console.error("Error fetching camera sources:", error);
+    }
+  };
+
+  const switchCamera = async (value: string) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const source = cameraSources.find(
+        (s) => `${s.type}-${s.index || s.url}` === value
+      );
+
+      if (!source) return;
+
+      const payload =
+        source.type === "local"
+          ? { type: "local", index: source.index }
+          : { type: source.type, url: source.url };
+
+      const response = await fetch(`${apiUrl}/camera/switch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (data.status === "success") {
+        setSelectedCamera(value);
+        // If camera is streaming, restart it with new source
+        if (isStreaming) {
+          stopWebcam();
+          setTimeout(() => startWebcam(), 500);
+        }
+      }
+    } catch (error) {
+      console.error("Error switching camera:", error);
+      setError("Failed to switch camera");
+    }
+  };
 
   const startWebcam = async () => {
     try {
@@ -299,6 +362,25 @@ export function WebcamDetection() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-white">Live Webcam Detection</CardTitle>
           <div className="flex items-center gap-2">
+            {cameraSources.length > 1 && (
+              <Select value={selectedCamera} onValueChange={switchCamera}>
+                <SelectTrigger className="w-[200px] bg-gray-800 border-gray-700 text-white">
+                  <Camera className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Select camera" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  {cameraSources.map((source, idx) => (
+                    <SelectItem
+                      key={idx}
+                      value={`${source.type}-${source.index || source.url}`}
+                      className="text-white hover:bg-gray-700"
+                    >
+                      {source.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {isStreaming && (
               <Badge
                 variant="outline"

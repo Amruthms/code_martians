@@ -143,22 +143,41 @@ def vision_status():
         vision_process = None
         return {"status": "stopped", "running": False}
 
-# Global variable for video stream
+# Global variables for video streams
 camera = None
 active_camera_source = 0  # Track which camera is active
+camera_instances = {}  # Dictionary to store multiple camera instances
 
-def get_camera():
-    """Get or create camera instance"""
-    global camera
-    if camera is None or not camera.isOpened():
-        camera = cv2.VideoCapture(active_camera_source)
-        # Set camera properties for wider field of view
-        camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)  # Increased from 640
-        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)  # Increased from 480
-        camera.set(cv2.CAP_PROP_FPS, 30)
-    return camera
+def get_camera(source=None):
+    """Get or create camera instance for specific source"""
+    global camera, camera_instances
+    
+    # If no source specified, use the active camera source
+    if source is None:
+        source = active_camera_source
+    
+    # For the default camera, use the global variable
+    if source == active_camera_source:
+        if camera is None or not camera.isOpened():
+            camera = cv2.VideoCapture(active_camera_source)
+            # Set camera properties for wider field of view
+            camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            camera.set(cv2.CAP_PROP_FPS, 30)
+        return camera
+    
+    # For other sources, use the instances dictionary
+    source_key = str(source)
+    if source_key not in camera_instances or not camera_instances[source_key].isOpened():
+        camera_instances[source_key] = cv2.VideoCapture(source)
+        camera_instances[source_key].set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        camera_instances[source_key].set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        camera_instances[source_key].set(cv2.CAP_PROP_FPS, 30)
+    
+    return camera_instances[source_key]
 
-def generate_frames():
+def generate_frames(source=None):
+def generate_frames(source=None):
     """Generate video frames with detections"""
     from detector import detect_persons
     from ppe import roi_slices, mask_ratio_hsv
@@ -180,7 +199,7 @@ def generate_frames():
     H_T = CFG.get("helmet_ratio_thresh", 0.10)
     V_T = CFG.get("vest_ratio_thresh", 0.15)
     
-    cam = get_camera()
+    cam = get_camera(source)
     frame_count = 0
     
     while True:
@@ -299,10 +318,20 @@ def generate_frames():
             continue
 
 @app.get("/video_feed")
-def video_feed():
-    """Video streaming endpoint"""
+def video_feed(source: str = None):
+    """Video streaming endpoint with optional source parameter"""
+    # Parse source parameter - can be camera index or URL
+    camera_source = None
+    if source:
+        try:
+            # Try to parse as integer (local webcam index)
+            camera_source = int(source)
+        except ValueError:
+            # It's a URL (IP camera or RTSP)
+            camera_source = source
+    
     return StreamingResponse(
-        generate_frames(),
+        generate_frames(camera_source),
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
 
@@ -319,3 +348,74 @@ def release_camera():
             return {"status": "not_active", "message": "Camera was not active"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+@app.post("/camera/switch")
+def switch_camera(source: dict):
+    """
+    Switch camera source
+    Supports:
+    - Local webcam: {"type": "local", "index": 0}
+    - IP Camera/Phone: {"type": "ip", "url": "http://192.168.1.100:8080/video"}
+    - RTSP Stream: {"type": "rtsp", "url": "rtsp://192.168.1.100:8554/stream"}
+    """
+    global camera, active_camera_source
+    
+    try:
+        # Release current camera
+        if camera is not None:
+            camera.release()
+            camera = None
+        
+        # Determine the new source
+        if source.get("type") == "local":
+            active_camera_source = source.get("index", 0)
+        elif source.get("type") == "ip":
+            # For IP Webcam app: http://192.168.x.x:8080/video
+            active_camera_source = source.get("url")
+        elif source.get("type") == "rtsp":
+            # For RTSP streams
+            active_camera_source = source.get("url")
+        else:
+            return {"status": "error", "message": "Invalid source type"}
+        
+        # Test the new source
+        test_cam = cv2.VideoCapture(active_camera_source)
+        if not test_cam.isOpened():
+            return {"status": "error", "message": "Failed to open camera source"}
+        test_cam.release()
+        
+        return {
+            "status": "success",
+            "message": "Camera source switched successfully",
+            "source": str(active_camera_source)
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/camera/sources")
+def list_camera_sources():
+    """List available camera sources and their status"""
+    sources = []
+    
+    # Check local webcams (0-3)
+    for i in range(4):
+        cap = cv2.VideoCapture(i)
+        if cap.isOpened():
+            sources.append({
+                "type": "local",
+                "index": i,
+                "name": f"Local Webcam {i}",
+                "available": True,
+                "active": (active_camera_source == i)
+            })
+            cap.release()
+    
+    return {
+        "sources": sources,
+        "current": str(active_camera_source),
+        "instructions": {
+            "ip_webcam": "Install 'IP Webcam' app on Android. Use URL: http://PHONE_IP:8080/video",
+            "droidcam": "Install 'DroidCam' app. Use URL format based on app settings",
+            "rtsp": "For RTSP streams, use: rtsp://IP:PORT/stream"
+        }
+    }
