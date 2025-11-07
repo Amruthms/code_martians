@@ -1,8 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, Response
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from fastapi.responses import StreamingResponse, Response, PlainTextResponse, JSONResponse
+from pydantic import BaseModel, field_validator
+from typing import Optional, List, Dict, Any, Literal
 import time
 import os
 import subprocess
@@ -10,11 +10,33 @@ import signal
 import cv2
 import numpy as np
 from ultralytics import YOLO
+from dotenv import load_dotenv
+from twilio.rest import Client
+
+# Load environment variables
+load_dotenv()
+
+# Twilio Configuration
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_CALLER_NUMBER = os.getenv("TWILIO_CALLER_NUMBER")
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+
+# Initialize Twilio client if credentials are available
+twilio_client = None
+if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_CALLER_NUMBER:
+    try:
+        twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        print(f"[INFO] Twilio client initialized. Caller: {TWILIO_CALLER_NUMBER}")
+    except Exception as e:
+        print(f"[WARN] Twilio initialization failed: {e}")
+else:
+    print("[WARN] Twilio not configured. Emergency calling disabled.")
 
 app = FastAPI(
-    title="Construction Safety API",
-    description="AI-Powered Construction Site Safety Intelligence System API",
-    version="1.0.0"
+    title="Construction Safety API with Emergency Calling",
+    description="AI-Powered Construction Site Safety Intelligence System API with Twilio Emergency Calls",
+    version="2.0.0"
 )
 
 # CORS configuration
@@ -405,13 +427,206 @@ def list_camera_sources():
         }
     }
 
+# ============================================================================
+# TWILIO EMERGENCY CALLING SYSTEM
+# ============================================================================
+
+# Pydantic models for Twilio
+class CallRequest(BaseModel):
+    to: str
+    message: Optional[str] = "This is a safety alert from the AI-powered construction monitoring system."
+
+    @field_validator("to")
+    @classmethod
+    def validate_e164(cls, v: str):
+        if not v.startswith("+") or not v[1:].replace(" ", "").replace("-", "").isdigit():
+            raise ValueError("Phone number must be in E.164 format, e.g., +15551234567")
+        return v
+
+ContactName = Literal["fire", "ambulance", "police", "manager"]
+
+# Emergency contacts configuration
+EMERGENCY_CONTACTS: Dict[ContactName, Dict[str, str]] = {
+    "fire": {
+        "to": os.getenv("EMERGENCY_FIRE", "+47110110"),
+        "message": "🚨 EMERGENCY: Possible fire hazard detected at the construction site. Immediate response required."
+    },
+    "ambulance": {
+        "to": os.getenv("EMERGENCY_AMBULANCE", "+47110113"),
+        "message": "🚑 MEDICAL EMERGENCY: Injury detected at the construction site. Please dispatch an ambulance immediately."
+    },
+    "police": {
+        "to": os.getenv("EMERGENCY_POLICE", "+47110112"),
+        "message": "🚓 SECURITY ALERT: Potential unauthorized access detected at the construction site. Please respond."
+    },
+    "manager": {
+        "to": os.getenv("EMERGENCY_MANAGER", "+4712345678"),
+        "message": "⚠️ AI SAFETY ALERT: Immediate attention required at the construction site. Check the dashboard now."
+    },
+}
+
+# Simple cooldown mechanism to prevent spam
+_last_call_timestamp: Dict[str, float] = {}
+CALL_COOLDOWN_SECONDS = 20
+
+def check_call_cooldown(key: str):
+    """Check if enough time has passed since last call to prevent spam"""
+    now = time.time()
+    last_call = _last_call_timestamp.get(key, 0)
+    if now - last_call < CALL_COOLDOWN_SECONDS:
+        wait_time = int(CALL_COOLDOWN_SECONDS - (now - last_call))
+        raise HTTPException(
+            status_code=429,
+            detail=f"Please wait {wait_time} seconds before calling again to prevent spam."
+        )
+    _last_call_timestamp[key] = now
+
+@app.get("/voice/status")
+def voice_status():
+    """Check Twilio configuration status"""
+    return {
+        "configured": twilio_client is not None,
+        "caller_number": TWILIO_CALLER_NUMBER if twilio_client else None,
+        "base_url": BASE_URL,
+        "emergency_contacts": {
+            name: {"number": contact["to"]} 
+            for name, contact in EMERGENCY_CONTACTS.items()
+        } if twilio_client else None
+    }
+
+@app.post("/voice/call")
+def voice_call_custom(body: CallRequest):
+    """
+    Place an emergency call to a custom verified number with a custom message.
+    Used for calling any verified number during Twilio trial.
+    """
+    if not twilio_client:
+        raise HTTPException(
+            status_code=503,
+            detail="Twilio is not configured. Please set TWILIO_* environment variables."
+        )
+    
+    check_call_cooldown(f"custom:{body.to}")
+    
+    try:
+        # Use TwiML directly without callback URL
+        twiml = f'<Response><Say voice="alice">{body.message}</Say></Response>'
+        
+        call = twilio_client.calls.create(
+            to=body.to,
+            from_=TWILIO_CALLER_NUMBER,
+            twiml=twiml
+        )
+        return {
+            "ok": True,
+            "sid": call.sid,
+            "to": body.to,
+            "message": "Call initiated successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Twilio error: {str(e)}")
+
+@app.post("/voice/call/{contact}")
+def voice_call_emergency(contact: ContactName):
+    """
+    Place an emergency call to one of the preset contacts:
+    - fire: Fire emergency services
+    - ambulance: Medical emergency services  
+    - police: Police/security services
+    - manager: Site manager notification
+    """
+    if not twilio_client:
+        raise HTTPException(
+            status_code=503,
+            detail="Twilio is not configured. Please set TWILIO_* environment variables."
+        )
+    
+    check_call_cooldown(f"contact:{contact}")
+    
+    target = EMERGENCY_CONTACTS[contact]
+    
+    try:
+        # Use TwiML directly without callback URL
+        twiml = f'<Response><Say voice="alice">{target["message"]}</Say></Response>'
+        
+        call = twilio_client.calls.create(
+            to=target["to"],
+            from_=TWILIO_CALLER_NUMBER,
+            twiml=twiml
+        )
+        
+        # Log the emergency call
+        ALERTS.append({
+            "type": f"EMERGENCY_CALL_{contact.upper()}",
+            "ts": int(time.time() * 1000),
+            "zone": None,
+            "frame_path": None,
+            "meta": {
+                "contact": contact,
+                "to": target["to"],
+                "call_sid": call.sid
+            }
+        })
+        
+        return {
+            "ok": True,
+            "sid": call.sid,
+            "contact": contact,
+            "to": target["to"],
+            "message": f"Emergency call to {contact} initiated successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Twilio error: {str(e)}")
+
+@app.get("/voice/twiml", response_class=PlainTextResponse)
+def voice_twiml(msg: str = "This is a safety alert from the construction site."):
+    """
+    TwiML endpoint that Twilio fetches to know what to do when the call is answered.
+    This uses Twilio's text-to-speech to read the message.
+    """
+    # Sanitize message (remove non-printable characters)
+    safe_msg = "".join(ch for ch in msg if ch.isprintable())
+    
+    # TwiML response with polly voice
+    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna" language="en-US">{safe_msg}</Say>
+  <Pause length="1"/>
+  <Say voice="Polly.Joanna">This message will repeat.</Say>
+  <Pause length="1"/>
+  <Say voice="Polly.Joanna">{safe_msg}</Say>
+</Response>"""
+    return twiml
+
+# Exception handler for better error responses
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    if isinstance(exc, HTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail}
+        )
+    # Log unexpected errors
+    print(f"[ERROR] Unexpected error: {exc}")
+    import traceback
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
+
 if __name__ == "__main__":
     import uvicorn
     print("=" * 60)
-    print("🚀 Construction Safety API with YOLOv8 AI Model")
+    print("🚀 Construction Safety API with YOLOv8 + Emergency Calling")
     print("=" * 60)
     print("✅ Using YOLOv8 Helmet & Vest Detection Model")
     print("✅ Trained for: Hardhat, Safety Vest, and Violations")
+    if twilio_client:
+        print("✅ Twilio Emergency Calling System Active")
+        print(f"📞 Caller Number: {TWILIO_CALLER_NUMBER}")
+    else:
+        print("⚠️  Twilio Emergency Calling Not Configured")
     print("📡 Server starting on http://localhost:8000")
     print("=" * 60)
     uvicorn.run(app, host="0.0.0.0", port=8000)
