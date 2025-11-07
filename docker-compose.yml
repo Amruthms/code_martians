@@ -1,0 +1,100 @@
+version: '3.8'
+
+# ========================================
+# AI-Powered Safety Monitoring System
+# Main Branch - Development & Testing
+# ========================================
+
+services:
+  # ========================================
+  # YOLOv8 Model Provider
+  # Lightweight container to share the trained model
+  # ========================================
+  yolov8-model:
+    build:
+      context: ./yolov8_model
+      dockerfile: Dockerfile
+    container_name: yolov8-model
+    volumes:
+      - yolo_model:/models
+    networks:
+      - safety-network
+    restart: on-failure
+
+  # ========================================
+  # Backend - FastAPI Server with YOLOv8
+  # Handles video processing and detection
+  # ========================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: safety-backend
+    depends_on:
+      - yolov8-model
+    ports:
+      - "8000:8000"
+    environment:
+      - CORS_ORIGINS=http://localhost:80,http://localhost:3000,http://localhost:5173
+      - PYTHONUNBUFFERED=1
+      - MODEL_PATH=/app/models/best.pt
+    volumes:
+      # Mount the shared model volume
+      - yolo_model:/app/models:ro
+      # Persistent volumes for frames and logs
+      - ./backend/frames:/app/frames
+      - ./backend/logs:/app/logs
+    networks:
+      - safety-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ========================================
+  # Frontend - React Dashboard
+  # Serves the web interface
+  # ========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: safety-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "3000:80"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    networks:
+      - safety-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+# ========================================
+# Networks
+# ========================================
+networks:
+  safety-network:
+    driver: bridge
+    name: safety-network
+
+# ========================================
+# Volumes
+# ========================================
+volumes:
+  yolo_model:
+    name: yolo_model_data
+    driver: local
