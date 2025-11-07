@@ -145,12 +145,13 @@ def vision_status():
 
 # Global variable for video stream
 camera = None
+active_camera_source = 0  # Track which camera is active
 
 def get_camera():
     """Get or create camera instance"""
     global camera
     if camera is None or not camera.isOpened():
-        camera = cv2.VideoCapture(0)
+        camera = cv2.VideoCapture(active_camera_source)
         # Set camera properties for wider field of view
         camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)  # Increased from 640
         camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)  # Increased from 480

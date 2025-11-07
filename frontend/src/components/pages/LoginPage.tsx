@@ -12,10 +12,22 @@ interface LoginPageProps {
 export function LoginPage({ onLogin }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  // Default admin credentials
+  const ADMIN_EMAIL = 'admin@safety.com';
+  const ADMIN_PASSWORD = 'admin123';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin();
+    
+    // Check credentials
+    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      setError('');
+      onLogin();
+    } else {
+      setError('Invalid email or password. Please use admin credentials.');
+    }
   };
 
   return (
@@ -56,19 +68,25 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader>
-              <CardTitle className="text-white">Welcome Back</CardTitle>
+              <CardTitle className="text-white">Admin Login</CardTitle>
               <CardDescription className="text-gray-400">
-                Sign in to access the Safety Intelligence System
+                Sign in with admin credentials to access the Safety Intelligence System
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/50">
+                    <p className="text-sm text-red-400">{error}</p>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-gray-300">Email</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="supervisor@example.com"
+                    placeholder="admin@safety.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
@@ -93,19 +111,13 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   className="w-full text-white"
                   style={{ backgroundColor: '#FF7A00' }}
                 >
-                  Sign In
+                  Sign In as Admin
                 </Button>
-
-                <div className="grid grid-cols-3 gap-2 pt-2">
-                  <Button type="button" variant="outline" size="sm" onClick={onLogin} className="border-gray-700 text-gray-300 hover:bg-gray-800">
-                    Admin
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={onLogin} className="border-gray-700 text-gray-300 hover:bg-gray-800">
-                    Supervisor
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={onLogin} className="border-gray-700 text-gray-300 hover:bg-gray-800">
-                    Worker
-                  </Button>
+                
+                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/50">
+                  <p className="text-sm text-blue-400 mb-2"><strong>Default Admin Credentials:</strong></p>
+                  <p className="text-xs text-blue-300">Email: <code className="bg-blue-900/50 px-2 py-1 rounded">admin@safety.com</code></p>
+                  <p className="text-xs text-blue-300">Password: <code className="bg-blue-900/50 px-2 py-1 rounded">admin123</code></p>
                 </div>
               </form>
 
