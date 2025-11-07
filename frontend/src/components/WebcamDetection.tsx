@@ -53,7 +53,7 @@ export function WebcamDetection() {
 
   const fetchCameraSources = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8001";
       const response = await fetch(`${apiUrl}/camera/sources`);
       const data = await response.json();
       setCameraSources(data.sources || []);
@@ -70,7 +70,7 @@ export function WebcamDetection() {
 
   const switchCamera = async (value: string) => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8001";
       const source = cameraSources.find(
         (s) => `${s.type}-${s.index || s.url}` === value
       );
@@ -109,7 +109,7 @@ export function WebcamDetection() {
       setIsLoadingModel(true);
       console.log("🎥 Starting webcam...");
 
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8001";
 
       // First, verify the backend is accessible
       try {
@@ -121,7 +121,7 @@ export function WebcamDetection() {
         console.log("✅ Backend is running");
       } catch (err) {
         console.error("❌ Backend check failed:", err);
-        setError("Cannot connect to backend server. Please ensure it's running on port 8000.");
+        setError("Cannot connect to backend server. Please ensure it's running on port 8001.");
         setIsLoadingModel(false);
         return;
       }
@@ -189,7 +189,7 @@ export function WebcamDetection() {
       }
 
       // Call backend to release the camera hardware (delayed to prevent issues on restart)
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8001";
       setTimeout(async () => {
         try {
           const response = await fetch(`${apiUrl}/camera/release`, {
@@ -214,7 +214,7 @@ export function WebcamDetection() {
 
     detectionIntervalRef.current = window.setInterval(async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8001";
 
         // Fetch latest alerts
         const alertsResponse = await fetch(`${apiUrl}/alerts`);
@@ -455,7 +455,7 @@ export function WebcamDetection() {
         )}
 
         <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-          {/* MJPEG stream - direct img tag (works in most browsers) */}
+          {/* MJPEG stream with YOLOv8 detections from backend */}
           <img
             key={streamKey}
             ref={imgRef}
@@ -463,30 +463,13 @@ export function WebcamDetection() {
             style={{ 
               display: 'block'
             }}
-            alt="Live Camera Feed"
+            alt="Live Camera Feed with YOLOv8 Detection"
           />
           <canvas
             ref={canvasRef}
             className="absolute inset-0 w-full h-full pointer-events-none"
             style={{ display: "none" }}
           />
-
-          {/* Debug info overlay when streaming but image might not be visible */}
-          {isStreaming && imgRef.current && (
-            <div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-sm px-3 py-2 rounded-lg text-xs text-white space-y-1">
-              <div>Stream URL: {imgRef.current.src ? '✅ Set' : '❌ Not Set'}</div>
-              <div>Image Loaded: {imgRef.current.complete ? '✅ Yes' : '⏳ Loading...'}</div>
-              <div>Natural Size: {imgRef.current.naturalWidth}x{imgRef.current.naturalHeight}</div>
-              {imgRef.current.naturalWidth === 0 && (
-                <button
-                  onClick={() => window.open(imgRef.current?.src, '_blank', 'width=1280,height=720')}
-                  className="mt-2 px-3 py-1 bg-orange-600 hover:bg-orange-700 rounded text-white text-xs"
-                >
-                  📺 Open in New Window
-                </button>
-              )}
-            </div>
-          )}
 
           {!isStreaming && !error && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
@@ -495,7 +478,7 @@ export function WebcamDetection() {
                 Click "Start OpenCV Camera" to begin PPE detection
               </p>
               <p className="text-xs text-gray-500 mt-2">
-                Using OpenCV Vision Processing System
+                Using YOLOv8 AI Model for Real-Time Detection
               </p>
             </div>
           )}
