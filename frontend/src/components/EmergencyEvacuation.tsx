@@ -92,6 +92,8 @@ export function EmergencyEvacuation() {
     setCallingContact(contactType);
     
     try {
+      console.log(`Initiating call to ${contactName} (${contactType})...`);
+      
       const response = await fetch(`http://localhost:8000/voice/call/${contactType}`, {
         method: 'POST',
         headers: {
@@ -99,11 +101,13 @@ export function EmergencyEvacuation() {
         },
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (response.ok) {
-        toast.success('Emergency Call Initiated', {
-          description: `Calling ${contactName}. Call SID: ${data.sid}`,
+        toast.success('Emergency Call Initiated! ✅', {
+          description: `Successfully calling ${contactName}. The emergency service will receive a call shortly. Call SID: ${data.sid?.substring(0, 10)}...`,
           duration: 5000,
         });
       } else {
@@ -111,10 +115,19 @@ export function EmergencyEvacuation() {
       }
     } catch (error) {
       console.error('Emergency call error:', error);
-      toast.error('Call Failed', {
-        description: error instanceof Error ? error.message : 'Unable to place emergency call. Please try again.',
-        duration: 5000,
-      });
+      
+      // Check if it's a network error
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        toast.error('Backend Not Running ❌', {
+          description: 'Cannot connect to backend server. Please ensure the backend is running on http://localhost:8000',
+          duration: 7000,
+        });
+      } else {
+        toast.error('Call Failed ❌', {
+          description: error instanceof Error ? error.message : 'Unable to place emergency call. Please try again or contact emergency services directly.',
+          duration: 6000,
+        });
+      }
     } finally {
       setCallingContact(null);
     }
