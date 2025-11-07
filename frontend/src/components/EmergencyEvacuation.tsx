@@ -6,11 +6,6 @@ import {
   AlertTriangle, 
   Phone, 
   MapPin, 
-  Navigation, 
-  Users, 
-  CheckCircle,
-  XCircle,
-  Clock,
   Siren
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';

@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '../ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import { useApp } from '../../context/AppContext';
 import { toast } from 'sonner';
 import { generateIncidentReport } from '../../services/pdfGenerator';

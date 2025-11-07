@@ -1,7 +1,7 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { ZoneManagement } from './ZoneManagement';
-import { EnvironmentMonitoring } from './EnvironmentMonitoring';
-import { SiteMap } from './SiteMap';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ZoneManagement } from '@/components/pages/ZoneManagement';
+import { EnvironmentMonitoring } from '@/components/pages/EnvironmentMonitoring';
+import { SiteMap } from '@/components/pages/SiteMap';
 import { Map, Layers, Radio } from 'lucide-react';
 
 export function SiteManagementPage() {

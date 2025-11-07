@@ -15,7 +15,6 @@ import {
   Play,
   Star,
   Zap,
-  Shield,
   Users,
   TrendingUp
 } from 'lucide-react';
@@ -41,7 +40,7 @@ const allTrainingModules = [
 ];
 
 export function TrainingGamification() {
-  const { workers, awardBadge } = useApp();
+  const { workers } = useApp();
   const [selectedWorker, setSelectedWorker] = useState<number | null>(null);
   const [trainingDialogOpen, setTrainingDialogOpen] = useState(false);
   const [selectedModule, setSelectedModule] = useState<typeof allTrainingModules[0] | null>(null);

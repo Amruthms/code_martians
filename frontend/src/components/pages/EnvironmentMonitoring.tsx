@@ -1,8 +1,8 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Wind, Volume2, Thermometer, Droplets, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Progress } from '../ui/progress';
+import { Progress } from '@/components/ui/progress';
 
 const dustData = [
   { time: '00:00', value: 45 },

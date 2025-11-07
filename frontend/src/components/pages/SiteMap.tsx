@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { useApp } from '../../context/AppContext';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Switch } from '../ui/switch';
-import { Label } from '../ui/label';
+import { useApp } from '@/context/AppContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { 
   MapPin, 
   Construction, 
@@ -15,7 +15,7 @@ import {
   Shield,
   Zap
 } from 'lucide-react';
-import { Alert, AlertDescription } from '../ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 
@@ -45,7 +45,7 @@ interface HeatZone {
 }
 
 export function SiteMap() {
-  const { zones, workers, addAlert } = useApp();
+  const { zones, addAlert } = useApp();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const [showHeatMap, setShowHeatMap] = useState(true);
