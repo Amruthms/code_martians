@@ -246,6 +246,13 @@ def generate_frames(source=None):
     """Generate video frames with YOLOv8 detections"""
     
     cam = get_camera(source)
+    
+    # Check if camera is available
+    use_synthetic = False
+    if cam is None or not cam.isOpened():
+        print("[WARN] Camera not available. Using synthetic test frames.")
+        use_synthetic = True
+    
     frame_count = 0
     
     # Performance optimization settings
@@ -274,11 +281,36 @@ def generate_frames(source=None):
     # Send first few frames immediately without waiting for model
     print("[INFO] Sending initial frames...")
     
+    def generate_synthetic_frame():
+        """Generate a synthetic test frame when camera is unavailable"""
+        import numpy as np
+        import datetime
+        frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        frame[:] = (40, 40, 40)  # Dark gray background
+        
+        # Add "NO CAMERA" message
+        cv2.putText(frame, "NO CAMERA AVAILABLE", (100, 200), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 3)
+        cv2.putText(frame, "Using Test Pattern", (150, 280), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
+        
+        # Add timestamp
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cv2.putText(frame, timestamp, (200, 350), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (200, 200, 200), 1)
+        
+        return frame
+    
     while True:
-        success, frame = cam.read()
-        if not success:
-            print("[ERROR] Failed to read frame from camera")
-            break
+        # Get frame - either from camera or synthetic
+        if use_synthetic:
+            frame = generate_synthetic_frame()
+        else:
+            success, frame = cam.read()
+            if not success:
+                print("[ERROR] Failed to read frame from camera - switching to synthetic mode")
+                use_synthetic = True
+                frame = generate_synthetic_frame()
         
         try:
             frame_count += 1
@@ -367,7 +399,6 @@ def generate_frames(source=None):
             import traceback
             traceback.print_exc()
             annotated_frame = frame
-            continue
         
         # Encode frame as JPEG with lower quality for faster transmission
         try:
