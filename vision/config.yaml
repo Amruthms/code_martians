@@ -1,0 +1,44 @@
+# Vision Processing Configuration
+# Construction Safety Intelligence System
+
+# Camera Configuration
+video_source: 0  # 0 for default webcam, or path to video file
+backend_url: "http://localhost:8000"
+
+# Zones Configuration (polygon coordinates)
+zones:
+  - name: "Restricted Area"
+    id: 1
+    type: "restricted"
+    polygon: [[100, 100], [300, 100], [300, 300], [100, 300]]
+    color: [0, 0, 255]  # Red in BGR
+    
+  - name: "Hard Hat Zone"
+    id: 2
+    type: "ppe_required"
+    polygon: [[400, 100], [600, 100], [600, 300], [400, 300]]
+    color: [0, 255, 255]  # Yellow in BGR
+
+# Helmet Detection (HSV color range for yellow/orange)
+helmet_hsv:
+  h1: 15
+  h2: 35
+  s1: 100
+  s2: 255
+  v1: 100
+  v2: 255
+
+# Vest Detection (HSV color range for orange/yellow)
+vest_hsv:
+  h1: 10
+  h2: 40
+  s1: 100
+  s2: 255
+  v1: 100
+  v2: 255
+
+# Detection thresholds
+helmet_ratio_thresh: 0.10
+vest_ratio_thresh: 0.15
+proximity_pixels: 120
+

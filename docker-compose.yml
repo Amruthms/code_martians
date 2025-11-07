@@ -1,3 +1,49 @@
+version: "3.8"
+services:
+  yolov8-model:
+    build:
+      context: ./yolov8_model
+      dockerfile: Dockerfile
+    container_name: yolov8-model
+    volumes:
+      - yolomodel:/models
+    networks:
+      - safety-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: safety-backend
+    depends_on:
+      - yolov8-model
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app:ro
+      - yolomodel:/app/models:rw
+    environment:
+      - MODEL_PATH=/app/models/best.pt
+      - VIRTUAL_ENV=/opt/venv
+    networks:
+      - safety-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: safety-frontend
+    ports:
+      - "3001:80"
+    networks:
+      - safety-net
+
+volumes:
+  yolomodel:
+
+networks:
+  safety-net:
+    driver: bridge
 version: '3.8'
 
 services:

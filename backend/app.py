@@ -185,9 +185,13 @@ def get_yolo_model():
     global yolo_model
     
     if yolo_model is None:
-        # Path to the trained YOLOv8 model
-        model_path = os.path.join(os.path.dirname(__file__), "best.pt")
+        # Path to the trained YOLOv8 model - allow override via MODEL_PATH env var
+        default_path = os.path.join(os.path.dirname(__file__), "best.pt")
+        model_path = os.environ.get("MODEL_PATH", default_path)
         print(f"[INFO] Loading YOLOv8 trained model from: {model_path}")
+        if not os.path.isfile(model_path):
+            print(f"[WARN] Model file not found at {model_path}. Trying default path {default_path}")
+            model_path = default_path
         yolo_model = YOLO(model_path)
         print(f"[INFO] YOLOv8 model loaded successfully!")
         print(f"[INFO] Model classes: {yolo_model.names}")
