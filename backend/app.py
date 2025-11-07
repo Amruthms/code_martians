@@ -9,6 +9,7 @@ import subprocess
 import signal
 import cv2
 import numpy as np
+from ultralytics import YOLO
 
 app = FastAPI(
     title="Construction Safety API",
@@ -176,28 +177,28 @@ def get_camera(source=None):
     
     return camera_instances[source_key]
 
+# Global variables for trained YOLOv8 model
+yolo_model = None
+
+def get_yolo_model():
+    """Initialize YOLOv8 trained model (singleton)"""
+    global yolo_model
+    
+    if yolo_model is None:
+        # Path to the trained YOLOv8 model
+        model_path = os.path.join(os.path.dirname(__file__), "best.pt")
+        print(f"[INFO] Loading YOLOv8 trained model from: {model_path}")
+        yolo_model = YOLO(model_path)
+        print(f"[INFO] YOLOv8 model loaded successfully!")
+        print(f"[INFO] Model classes: {yolo_model.names}")
+    
+    return yolo_model
+
 def generate_frames(source=None):
-def generate_frames(source=None):
-    """Generate video frames with detections"""
-    from detector import detect_persons
-    from ppe import roi_slices, mask_ratio_hsv
-    import yaml
+    """Generate video frames with YOLOv8 detections"""
     
-    # Load config
-    vision_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "vision")
-    config_path = os.path.join(vision_dir, "config.yaml")
-    
-    try:
-        with open(config_path, "r") as f:
-            CFG = yaml.safe_load(f)
-    except:
-        CFG = {}
-    
-    zones = CFG.get("zones", [])
-    H = CFG.get("helmet_hsv", {})
-    V = CFG.get("vest_hsv", {})
-    H_T = CFG.get("helmet_ratio_thresh", 0.10)
-    V_T = CFG.get("vest_ratio_thresh", 0.15)
+    # Initialize YOLOv8 model
+    model = get_yolo_model()
     
     cam = get_camera(source)
     frame_count = 0
@@ -208,9 +209,8 @@ def generate_frames(source=None):
             print("Failed to read frame from camera")
             break
         
-        # Resize for display - keep original aspect ratio without zooming
         try:
-            # Don't resize too much to avoid zooming effect
+            # Resize for display - keep original aspect ratio
             h, w = frame.shape[:2]
             if w > 1280:
                 scale = 1280 / w
@@ -218,93 +218,74 @@ def generate_frames(source=None):
             
             frame_count += 1
             
-            # Detect persons every frame
-            persons = detect_persons(frame)
+            # Run YOLOv8 prediction
+            results = model.predict(frame, conf=0.5, verbose=False)[0]
             
-            # Draw zones
-            for z in zones:
-                polygon = z.get("polygon", [])
-                if polygon and len(polygon) > 0:
-                    pts = np.array(polygon, np.int32).reshape((-1, 1, 2))
-                    cv2.polylines(frame, [pts], True, tuple(z.get("color", [0, 0, 255])), 2)
-                    if len(polygon) > 0:
-                        cv2.putText(frame, z.get("name", "Zone"), tuple(polygon[0]), 
-                                  cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            # Get annotated frame with bounding boxes
+            annotated_frame = results.plot()
             
-            # Process each detected person
-            for (x, y, w, h) in persons:
-                # Get ROIs for helmet and vest detection
-                head_roi = (slice(y, max(0, y+h//3)), slice(x, x+w))
-                torso_roi = (slice(y+h//3, y+2*h//3), slice(x, x+w))
+            # Count violations for alerts
+            violation_count = 0
+            no_helmet_count = 0
+            no_vest_count = 0
+            
+            # Parse detections for alert generation
+            if results.boxes is not None:
+                for box in results.boxes:
+                    cls_id = int(box.cls[0])
+                    class_name = model.names[cls_id]
+                    conf = float(box.conf[0])
+                    
+                    # Check for violations
+                    if 'NO-Hardhat' in class_name or 'NO-Safety Vest' in class_name:
+                        violation_count += 1
+                        
+                        if 'NO-Hardhat' in class_name:
+                            no_helmet_count += 1
+                        if 'NO-Safety Vest' in class_name:
+                            no_vest_count += 1
+            
+            # Send alerts every 30 frames (once per second at 30fps)
+            if frame_count % 30 == 0:
+                if no_helmet_count > 0:
+                    ALERTS.append({
+                        "type": "NO_HELMET",
+                        "ts": int(time.time() * 1000),
+                        "zone": None,
+                        "frame_path": None,
+                        "meta": {"count": no_helmet_count}
+                    })
                 
-                try:
-                    head_img = frame[head_roi]
-                    torso_img = frame[torso_roi]
-                    
-                    # Check PPE
-                    helmet_ok = mask_ratio_hsv(head_img, **H) > H_T if H and len(H) > 0 else False
-                    vest_ok = mask_ratio_hsv(torso_img, **V) > V_T if V and len(V) > 0 else False
-                    
-                    # Draw bounding box
-                    color = (0, 255, 0) if (helmet_ok and vest_ok) else (0, 0, 255)
-                    cv2.rectangle(frame, (x, y), (x+w, y+h), color, 3)
-                    
-                    # Add labels
-                    status = "SAFE" if (helmet_ok and vest_ok) else "VIOLATION"
-                    label_color = (0, 255, 0) if (helmet_ok and vest_ok) else (0, 0, 255)
-                    
-                    # Draw status background
-                    cv2.rectangle(frame, (x, y-30), (x+150, y), label_color, -1)
-                    cv2.putText(frame, status, (x+5, y-8), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-                    
-                    # Draw specific violations
-                    y_offset = y + h + 25
-                    if not helmet_ok:
-                        cv2.putText(frame, "NO HELMET", (x, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-                        y_offset += 25
-                    if not vest_ok:
-                        cv2.putText(frame, "NO VEST", (x, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-                    
-                    # Send alerts to backend
-                    if frame_count % 30 == 0:  # Send alert every 30 frames
-                        if not helmet_ok:
-                            ALERTS.append({
-                                "type": "NO_HELMET",
-                                "ts": int(time.time() * 1000),
-                                "zone": None,
-                                "frame_path": None,
-                                "meta": {"confidence": 0.9}
-                            })
-                        if not vest_ok:
-                            ALERTS.append({
-                                "type": "NO_VEST",
-                                "ts": int(time.time() * 1000),
-                                "zone": None,
-                                "frame_path": None,
-                                "meta": {"confidence": 0.9}
-                            })
-                except Exception as e:
-                    print(f"PPE detection error: {e}")
-                    # Still draw the person box even if PPE detection fails
-                    cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 255, 0), 3)
-                    cv2.putText(frame, "PERSON", (x, y-8), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
+                if no_vest_count > 0:
+                    ALERTS.append({
+                        "type": "NO_VEST",
+                        "ts": int(time.time() * 1000),
+                        "zone": None,
+                        "frame_path": None,
+                        "meta": {"count": no_vest_count}
+                    })
             
             # Add "LIVE" indicator
-            cv2.rectangle(frame, (5, 5), (120, 45), (0, 0, 0), -1)
-            cv2.putText(frame, "LIVE", (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            cv2.rectangle(annotated_frame, (5, 5), (120, 45), (0, 0, 0), -1)
+            cv2.putText(annotated_frame, "LIVE", (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             
-            # Add detection count
-            cv2.putText(frame, f"Persons: {len(persons)}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            # Add detection counts
+            total_detections = len(results.boxes) if results.boxes is not None else 0
+            cv2.putText(annotated_frame, f"Detections: {total_detections}", (10, 70), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            cv2.putText(annotated_frame, f"Violations: {violation_count}", (10, 95), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255) if violation_count > 0 else (0, 255, 0), 2)
             
         except Exception as e:
             print(f"Frame processing error: {e}")
             import traceback
             traceback.print_exc()
+            annotated_frame = frame
             continue
         
         # Encode frame as JPEG
         try:
-            ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            ret, buffer = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
             if not ret:
                 print("Failed to encode frame")
                 continue
@@ -419,3 +400,14 @@ def list_camera_sources():
             "rtsp": "For RTSP streams, use: rtsp://IP:PORT/stream"
         }
     }
+
+if __name__ == "__main__":
+    import uvicorn
+    print("=" * 60)
+    print("🚀 Construction Safety API with YOLOv8 AI Model")
+    print("=" * 60)
+    print("✅ Using YOLOv8 Helmet & Vest Detection Model")
+    print("✅ Trained for: Hardhat, Safety Vest, and Violations")
+    print("📡 Server starting on http://localhost:8000")
+    print("=" * 60)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
