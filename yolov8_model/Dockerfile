@@ -34,7 +34,7 @@ WORKDIR /app
 COPY --from=model-prep /build/best.pt /app/best.pt
 
 # Copy the model copying script
-COPY copy_model.sh /app/copy_model.sh
+COPY yolov8_model/copy_model.sh /app/copy_model.sh
 
 # Make the script executable and verify
 RUN chmod +x /app/copy_model.sh && \
