@@ -53,6 +53,22 @@ app.add_middleware(
 vision_process = None
 ALERTS: List[Dict[str,Any]] = []
 
+# Startup event to pre-load model
+@app.on_event("startup")
+async def startup_event():
+    """Pre-load YOLOv8 model on server startup for faster first request"""
+    import threading
+    def preload():
+        print("[INFO] Pre-loading YOLOv8 model on startup...")
+        try:
+            get_yolo_model()
+            print("[INFO] Model pre-loaded successfully!")
+        except Exception as e:
+            print(f"[WARN] Failed to pre-load model: {e}")
+    
+    # Load in background thread to not block startup
+    threading.Thread(target=preload, daemon=True).start()
+
 class AlertIn(BaseModel):
     type: str
     ts: int
@@ -182,20 +198,26 @@ def get_camera(source=None):
     # For the default camera, use the global variable
     if source == active_camera_source:
         if camera is None or not camera.isOpened():
+            print(f"[INFO] Initializing camera {active_camera_source}...")
             camera = cv2.VideoCapture(active_camera_source)
-            # Set camera properties for wider field of view
-            camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-            camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            # Reduce resolution for faster capture and processing
+            camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             camera.set(cv2.CAP_PROP_FPS, 30)
+            camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimize buffer lag
+            print(f"[INFO] Camera initialized successfully")
         return camera
     
     # For other sources, use the instances dictionary
     source_key = str(source)
     if source_key not in camera_instances or not camera_instances[source_key].isOpened():
+        print(f"[INFO] Initializing camera {source}...")
         camera_instances[source_key] = cv2.VideoCapture(source)
-        camera_instances[source_key].set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        camera_instances[source_key].set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        camera_instances[source_key].set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        camera_instances[source_key].set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         camera_instances[source_key].set(cv2.CAP_PROP_FPS, 30)
+        camera_instances[source_key].set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        print(f"[INFO] Camera {source} initialized successfully")
     
     return camera_instances[source_key]
 
@@ -227,17 +249,20 @@ def generate_frames(source=None):
     frame_count = 0
     
     # Performance optimization settings
-    PROCESS_EVERY_N_FRAMES = 3  # Process 1 out of every 3 frames (reduces CPU by 66%)
-    INFERENCE_SIZE = 640  # Smaller size for faster inference
-    JPEG_QUALITY = 75  # Lower quality for faster encoding/transmission
+    PROCESS_EVERY_N_FRAMES = 5  # Process 1 out of every 5 frames (reduces CPU by 80%)
+    INFERENCE_SIZE = 480  # Smaller size for faster inference
+    JPEG_QUALITY = 70  # Lower quality for faster encoding/transmission
     
     # Pre-load model in background to avoid blocking first frames
     model = None
     model_loading = True
     last_annotated_frame = None  # Cache last processed frame
     
+    print("[INFO] Starting frame generation...")
+    
     def load_model_async():
         nonlocal model, model_loading
+        print("[INFO] Loading YOLOv8 model in background...")
         model = get_yolo_model()
         model_loading = False
         print("[INFO] YOLOv8 model loaded and ready for inference")
@@ -246,6 +271,9 @@ def generate_frames(source=None):
     import threading
     threading.Thread(target=load_model_async, daemon=True).start()
     
+    # Send first few frames immediately without waiting for model
+    print("[INFO] Sending initial frames...")
+    
     while True:
         success, frame = cam.read()
         if not success:
@@ -253,12 +281,6 @@ def generate_frames(source=None):
             break
         
         try:
-            # Resize for display - keep original aspect ratio
-            h, w = frame.shape[:2]
-            if w > 1280:
-                scale = 1280 / w
-                frame = cv2.resize(frame, (1280, int(h * scale)))
-            
             frame_count += 1
             
             # If model is still loading, send raw frames with loading message
